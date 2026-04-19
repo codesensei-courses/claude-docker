@@ -98,9 +98,34 @@ ENV PATH="/home/codesensei/.local/bin:/home/codesensei/.claude/bin:${PATH}"
 
 # ── Terminal true color ──────────────────────────────────────────────────────
 # Claude Code (and other TUI apps) check COLORTERM to decide whether to emit
-# 24-bit color escapes. 
+# 24-bit color escapes.
 ENV COLORTERM=truecolor
 RUN echo 'export COLORTERM=truecolor' >> /home/codesensei/.bashrc
+
+# ── MOTD: claude session cheatsheet ──────────────────────────────────────────
+# Shown on every new interactive bash shell (e.g. when a tmux window is opened
+# inside the container). Colors match the PS1 prompt: cyan rules, hot-pink
+# commands. Guarded on $- so non-interactive bash stays silent.
+RUN cat >> /home/codesensei/.bashrc <<'EOF'
+
+# ── Claude session MOTD ──────────────────────────────────────────────────────
+if [[ $- == *i* ]]; then
+    __cd_C='\e[0;96m'; __cd_P='\e[1;38;2;255;105;180m'; __cd_D='\e[2m'; __cd_R='\e[0m'
+    printf "\n${__cd_C}────────────────────────────────────────────────${__cd_R}\n"
+    printf "${__cd_C} 🐳 claude-docker — session commands${__cd_R}\n"
+    printf "${__cd_C}────────────────────────────────────────────────${__cd_R}\n"
+    printf "  ${__cd_P}%-18s${__cd_R} %s\n" 'claude'            'start a new session'
+    printf "  ${__cd_P}%-18s${__cd_R} %s\n" 'claude -c'         'continue last session (cwd)'
+    printf "  ${__cd_P}%-18s${__cd_R} %s\n" 'claude -r'         'pick a session to resume'
+    printf "  ${__cd_P}%-18s${__cd_R} %s\n" 'claude -r <query>' 'resume by search term'
+    printf "  ${__cd_P}%-18s${__cd_R} %s\n" 'claude -r <uuid>'  'resume a specific session ID'
+    printf "${__cd_C}────────────────────────────────────────────────${__cd_R}\n"
+    printf "${__cd_D} Sessions & prompt history persist on the host,${__cd_R}\n"
+    printf "${__cd_D} keyed per project.${__cd_R}\n"
+    printf "${__cd_C}────────────────────────────────────────────────${__cd_R}\n\n"
+    unset __cd_C __cd_P __cd_D __cd_R
+fi
+EOF
 
 # ── User-defined build extras ────────────────────────────────────────────────
 # Runs a user-editable script as the final build step. The default ships as

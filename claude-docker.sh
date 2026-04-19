@@ -10,6 +10,17 @@ fi
 PROJECT_ABS="$(realpath "$1")"
 PROJECT_NAME="$(basename "$PROJECT_ABS")"
 
+# Container name: "claude-docker-<project>-<hash>". The 8-char hash of the
+# absolute path disambiguates same-named projects in different locations
+# (e.g. ~/dev/foo vs ~/work/foo).
+if command -v sha1sum >/dev/null 2>&1; then
+    PROJECT_HASH=$(printf '%s' "$PROJECT_ABS" | sha1sum | cut -c1-8)
+else
+    PROJECT_HASH=$(printf '%s' "$PROJECT_ABS" | shasum | cut -c1-8)
+fi
+SAFE_NAME=$(printf '%s' "$PROJECT_NAME" | tr -c 'A-Za-z0-9_.-' '_')
+CONTAINER_NAME="claude-docker-${SAFE_NAME}-${PROJECT_HASH}"
+
 # Locate installed assets and state (XDG Base Directory compliant)
 CLAUDE_DOCKER_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/claude-docker"
 IMAGE_DIR="$CLAUDE_DOCKER_DATA/image"
@@ -131,8 +142,8 @@ if [ -d "$HOME_OVERLAY" ]; then
 fi
 
 # Attach to existing session or start a new container
-docker exec -it claude-docker tmux attach 2>/dev/null || \
-docker run -it --rm  \
+docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null || \
+docker run -it --rm --name "$CONTAINER_NAME" \
     --mount type=bind,source="$PROJECT_ABS",destination="/home/codesensei/$PROJECT_NAME" \
     -v "$STATE_DIR/credentials.json":/home/codesensei/.claude/.credentials.json \
     -v "$STATE_DIR/claude.json":/home/codesensei/.claude.json \

@@ -39,13 +39,21 @@ The first time, this will ask you some question about configuration (you can jus
 ## Mounting extra files
 You might want to make a certain file available in all your editing sessions (like your gitconfig or your editor config).
 
-The easiest way is to drop the file (or a symlink to it) into `~/.local/share/claude-docker/home/`. Anything there shows up at the matching path under `/home/codesensei/` inside the container on every run:
+The easiest way is to drop the file (or a symlink to it) into `~/.local/share/claude-docker/home/`. Anything there shows up at the matching path under `/home/codesensei/` inside the container on every run. For example, to share your tmux config:
 
 ```sh
-ln -s ~/.gitconfig ~/.local/share/claude-docker/home/.gitconfig
+ln -s ~/.tmux.conf ~/.local/share/claude-docker/home/.tmux.conf
 ```
 
-That's it — your next `claude-docker` session will have your `~/.gitconfig` available. For read-only mounts, paths outside `$HOME`, or other advanced cases, see the *Mounting extra files (dotfiles, configs, ...)* section further down.
+That's it — your next `claude-docker` session will use your tmux keybindings.
+
+> **Tip:** mounts via `home/` are read-write, which is fine for harmless configs like `.tmux.conf`. For anything where a container-side change could affect your host (`.gitconfig`, `.ssh`, credentials, ...), mount it read-only via `mounts.conf` instead. For example, to share your gitconfig read-only, add this line to `~/.local/share/claude-docker/mounts.conf`:
+>
+> ```
+> ~/.gitconfig:/home/codesensei/.gitconfig:ro
+> ```
+
+For paths outside `$HOME` or other advanced cases, see the *Mounting extra files (dotfiles, configs, ...)* section further down.
 
 
 # Installation

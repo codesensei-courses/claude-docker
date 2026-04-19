@@ -28,6 +28,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
 
+ENV DEVCONTAINER=true
+# Set the default editor and visual
+ENV EDITOR=nano
+ENV VISUAL=nano
+
 # ── Locale ───────────────────────────────────────────────────────────────────
 # Generate en_US.UTF-8 (default) and nl_NL.UTF-8 (Dutch). Without this, TUI
 # apps like Claude Code may misrender box-drawing and other Unicode glyphs.

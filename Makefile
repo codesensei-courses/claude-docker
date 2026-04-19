@@ -1,22 +1,7 @@
 .PHONY: clean deploy claude build run claude-state
 
-deploy:
-	./deploy.sh
-
-zip:
-	mkdir -p cursus_zip
-	publishing/mkzip.sh
-
-new:
-	./new_course.sh
-
-clean:
-	rm -rf deploy cursus_zip
-	rm ~/.org-timestamps/*.cache
-	mkdir -p deploy
-
 build:
-	docker build . --tag=live-courses:latest
+	docker build . --tag=claude-docker:latest
 
 claude-state:
 	# Ensure the host state files exist before `docker run`. Docker
@@ -39,13 +24,13 @@ run: claude-state
 		--mount type=bind,source=.,destination=/home/codesensei/live_courses \
 		-v ~/.claude-docker/.credentials.json:/home/codesensei/.claude/.credentials.json \
 		-v ~/.claude-docker/.claude.json:/home/codesensei/.claude.json \
-		live-courses
+		claude-docker
 
 claude: claude-state
-	docker exec -it live-courses tmux attach 2>/dev/null || \
-	docker run -it --rm --name live-courses \
+	docker exec -it claude-docker tmux attach 2>/dev/null || \
+	docker run -it --rm --name claude-docker \
 		--mount type=bind,source=.,destination=/home/codesensei/project/ \
 		-v ~/.claude-docker/.credentials.json:/home/codesensei/.claude/.credentials.json \
 		-v ~/.claude-docker/.claude.json:/home/codesensei/.claude.json \
-		live-courses \
+		claude-docker \
 		tmux new-session claude

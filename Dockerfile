@@ -46,9 +46,13 @@ RUN if [ -n "$LOCALE" ] \
 ENV LANG=${LOCALE:-C.UTF-8}
 
 # ── Timezone ─────────────────────────────────────────────────────────────────
-ENV TZ=Europe/Amsterdam
-RUN ln -fs /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime \
-    && echo "Europe/Amsterdam" > /etc/timezone \
+# If the launcher detected a host timezone and the user accepted, use it.
+# Otherwise fall back to UTC.
+# Usage: docker build --build-arg TZ=Europe/Amsterdam ...
+ARG TZ=UTC
+ENV TZ=${TZ}
+RUN ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime \
+    && echo "${TZ}" > /etc/timezone \
     && dpkg-reconfigure -f noninteractive tzdata
 
 # ── User: codesensei ─────────────────────────────────────────────────────────

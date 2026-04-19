@@ -27,6 +27,22 @@ if ! docker image inspect claude-docker:latest &>/dev/null; then
                 BUILD_ARGS+=(--build-arg LOCALE="$LANG")
             fi
         fi
+        # Detect host timezone. On both Linux and macOS /etc/localtime is a
+        # symlink into a zoneinfo tree; the IANA name is whatever comes after
+        # "zoneinfo/" (e.g. /usr/share/zoneinfo/Europe/Amsterdam on Linux,
+        # /var/db/timezone/zoneinfo/Europe/Amsterdam on macOS).
+        HOST_TZ=""
+        if tz_link="$(readlink /etc/localtime 2>/dev/null)" && [[ "$tz_link" == *zoneinfo/* ]]; then
+            HOST_TZ="${tz_link##*zoneinfo/}"
+        elif [[ -r /etc/timezone ]]; then
+            HOST_TZ="$(< /etc/timezone)"
+        fi
+        if [[ -n "$HOST_TZ" ]]; then
+            read -rp "Match host timezone '$HOST_TZ' in the image? [Y/n] " tz_answer
+            if [[ ! "$tz_answer" =~ ^[Nn]$ ]]; then
+                BUILD_ARGS+=(--build-arg TZ="$HOST_TZ")
+            fi
+        fi
         docker build "${BUILD_ARGS[@]}" -t claude-docker:latest "$IMAGE_DIR"
         echo
         echo "Tip: customize your image by editing"

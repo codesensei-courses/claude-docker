@@ -16,13 +16,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nano \
     ripgrep \
     tmux \
-    # Claude Code sandbox (OS-level network/filesystem isolation)
-    bubblewrap \
     # Locale + timezone support
     locales \
     sudo\
     tzdata \
     unzip \
+    # Claude Code sandbox (OS-level network/filesystem isolation)
+    bubblewrap \
+    socat \
     && rm -rf /var/lib/apt/lists/*
 
 
@@ -114,7 +115,8 @@ ENV COLORTERM=truecolor
 RUN echo 'export COLORTERM=truecolor' >> /home/codesensei/.bashrc
 
 # --- bat
-RUN echo 'alias cat="batcat"'
+RUN echo 'alias cat="batcat"' >> /home/codesensei/.bashrc
+RUN echo 'alias bat="batcat"' >> /home/codesensei/.bashrc
 RUN echo 'export MANPAGER="batcat -plman"' >> /home/codesensei/.bashrc
 
 # ── Bash history ─────────────────────────────────────────────────────────────

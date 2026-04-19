@@ -144,6 +144,28 @@ claude-docker ~/dev/my_website       # same as -c
 claude-docker -e 'npm test && npm run build' ~/dev/my_website
 ```
 
+### Making a flag the default
+
+If you always want a particular mode, alias the launcher in your shell rc
+(`~/.bashrc`, `~/.zshrc`, ...):
+
+```sh
+# always run inside tmux
+alias claude-docker='claude-docker -t'
+
+# always drop straight into a shell
+alias claude-docker='claude-docker -b'
+
+# always run a specific command
+alias cdtest='claude-docker -e "npm test && npm run build"'
+```
+
+Reload your shell (or `source ~/.bashrc`) and `claude-docker ~/dev/my_website`
+will behave as if you'd typed the flag. You can still override on a one-off
+basis by passing a different flag — later flags win, so
+`claude-docker -c ~/dev/my_website` falls back to the default Claude session
+even if your alias sets `-t`.
+
 ## What gets persisted
 
 State lives on the host under `~/.local/share/claude-docker/state/` and is

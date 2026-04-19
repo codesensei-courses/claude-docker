@@ -132,11 +132,16 @@ Pick what runs inside the container with one of these mutually-exclusive flags
 - `-b` — drop into a plain bash shell instead of launching Claude. Handy for
   poking around the container, inspecting mounts, or running one-off commands
   with the project's env.
+- `-e <cmd>` — run a custom command inside the container via `bash -c`.
+  The command string is passed to bash unchanged, so shell syntax like `&&`,
+  `||`, pipes, and redirections all work. Quote the whole command to keep
+  your host shell from interpreting it first.
 
 ```sh
 claude-docker -t ~/dev/my_website    # tmux-backed session
 claude-docker -b ~/dev/my_website    # just a shell
 claude-docker ~/dev/my_website       # same as -c
+claude-docker -e 'npm test && npm run build' ~/dev/my_website
 ```
 
 ## What gets persisted

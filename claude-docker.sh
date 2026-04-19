@@ -2,22 +2,27 @@
 set -euo pipefail
 
 MODE=claude
-while getopts ":tbc" opt; do
+CUSTOM_CMD=""
+while getopts ":tbce:" opt; do
     case "$opt" in
         t)  MODE=tmux ;;
         b)  MODE=bash ;;
         c)  MODE=claude ;;
+        e)  MODE=exec; CUSTOM_CMD="$OPTARG" ;;
+        :)  echo "Option -$OPTARG requires an argument" >&2; exit 1 ;;
         \?) echo "Unknown option: -$OPTARG" >&2; exit 1 ;;
     esac
 done
 shift $((OPTIND - 1))
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 [-t|-b|-c] <project-folder>" >&2
-    echo "  -t  attach to existing tmux session, or start a new one" >&2
-    echo "  -b  start just a bash shell" >&2
-    echo "  -c  continue the claude session, or start a new one (default)" >&2
+    echo "Usage: $0 [-t|-b|-c|-e <cmd>] <project-folder>" >&2
+    echo "  -t         attach to existing tmux session, or start a new one" >&2
+    echo "  -b         start just a bash shell" >&2
+    echo "  -c         continue the claude session, or start a new one (default)" >&2
+    echo "  -e <cmd>   run a custom command via bash -c (supports &&, ||, pipes)" >&2
     echo "Example: $0 ~/dev/my_website" >&2
+    echo "         $0 -e 'npm test && npm run build' ~/dev/my_website" >&2
     exit 1
 fi
 
@@ -151,7 +156,6 @@ if [ -r "$MOUNTS_CONF" ]; then
         fi
 
         spec="$src:$dst"
-        echo "Detected mount: $src -> $dst"
         [ -n "${opt:-}" ] && spec="$spec:$opt"
 
         EXTRA_MOUNTS+=(-v "$spec")
@@ -198,6 +202,7 @@ case "$MODE" in
     tmux)   RUN_CMD=(tmux new-session claude) ;;
     bash)   RUN_CMD=(bash) ;;
     claude) RUN_CMD=(bash -c 'claude -c || claude') ;;
+    exec)   RUN_CMD=(bash -c "$CUSTOM_CMD") ;;
 esac
 
 # If the container is already running (e.g. a second `claude-docker ~/proj`

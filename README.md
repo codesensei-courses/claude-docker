@@ -90,8 +90,15 @@ as the `codesensei` user at the end of the Docker build. Edit it to install
 extra packages, drop in dotfiles, or otherwise customize your image.
 Passwordless `sudo` is available for anything that needs root.
 
-The file ships as a no-op with commented examples. After editing, rebuild the
-image:
+The file ships as a no-op with commented examples. A fuller reference —
+showcasing my current emacs/python setup — can be found in this repo as zexample-extras.sh`.
+
+```sh
+cp ~/.local/share/claude-docker/example-extras.sh \
+   ~/.local/share/claude-docker/image/build-extras.sh
+```
+
+After editing, rebuild the image:
 
 ```sh
 docker image rm claude-docker:latest
@@ -99,7 +106,8 @@ claude-docker ~/dev/my_website
 ```
 
 Your edits are preserved across upgrades: `install.sh` only writes the default
-`build-extras.sh` if the file does not already exist.
+`build-extras.sh` if the file does not already exist. `example-extras.sh` is
+refreshed on every `install.sh` run.
 
 ## Rebuild / update
 

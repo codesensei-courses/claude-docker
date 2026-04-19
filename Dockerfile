@@ -1,4 +1,3 @@
-# Debian + Emacs 30 + Claude Code + dev tools
 FROM debian:bookworm
 
 # ── System packages ──────────────────────────────────────────────────────────
@@ -16,10 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nano\
     ripgrep \
     tmux \
-    # dotdrop dependencies (Python-based dotfile manager)
-    python3 \
-    python3-pip \
-    python3-venv \
     # Claude Code sandbox (OS-level network/filesystem isolation)
     bubblewrap \
     # Locale + timezone support
@@ -50,18 +45,6 @@ RUN ln -fs /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime \
     && echo "Europe/Amsterdam" > /etc/timezone \
     && dpkg-reconfigure -f noninteractive tzdata
 
-# ── Emacs 30 ─────────────────────────────────────────────────────────────────
-# Debian bookworm ships Emacs 28. We add the Debian backports repo to get
-# Emacs 30. If bookworm-backports doesn't carry 30 yet at build time the
-# layer will fall back gracefully (emacs 28 is already installed above).
-RUN echo "deb http://deb.debian.org/debian bookworm-backports main" \
-        > /etc/apt/sources.list.d/backports.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        -t bookworm-backports emacs-nox \
-    || true \
-    && rm -rf /var/lib/apt/lists/*
-
 # ── User: codesensei ─────────────────────────────────────────────────────────
 # UID is passed at build time so files created in bind-mounted dirs are owned
 # by your host user (avoids permission mismatches).
@@ -75,17 +58,6 @@ RUN useradd -m -u ${UID} -s /bin/bash codesensei \
 # Run as codesensei so the binary lands in their home dir (~/.local/bin)
 USER codesensei
 RUN curl -fsSL https://claude.ai/install.sh | bash
-
-# ── uv (Python package manager) ──────────────────────────────────────────────
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# ── Python versions (via uv) ──────────────────────────────────────────────────
-RUN /home/codesensei/.local/bin/uv python install 3.11 3.12 3.13 3.14
-
-# ── Python tools (via uv) ────────────────────────────────────────────────────
-RUN /home/codesensei/.local/bin/uv tool install dotdrop \
-    && /home/codesensei/.local/bin/uv tool install poetry \
-    && /home/codesensei/.local/bin/uv tool install pipenv
 
 # ── Bash prompt ───────────────────────────────────────────────────────────────
 # Bright cyan bracket label "[🐳 docker]" + bold green user@host + blue path.
@@ -101,8 +73,7 @@ ENV PATH="/home/codesensei/.local/bin:/home/codesensei/.claude/bin:${PATH}"
 
 # ── Terminal true color ──────────────────────────────────────────────────────
 # Claude Code (and other TUI apps) check COLORTERM to decide whether to emit
-# 24-bit color escapes. Setting it here ensures the dark-ansi theme below
-# renders with full truecolor regardless of the host terminal's inheritance.
+# 24-bit color escapes. 
 ENV COLORTERM=truecolor
 RUN echo 'export COLORTERM=truecolor' >> /home/codesensei/.bashrc
 

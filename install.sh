@@ -40,12 +40,9 @@ set -euo pipefail
 #         htop jq fzf \
 #     && sudo rm -rf /var/lib/apt/lists/*
 
-# Example: extra uv-managed Python tools
-# uv tool install black
-# uv tool install ruff
-
 # Example: clone your dotfiles
 # git clone https://github.com/you/dotfiles "$HOME/.dotfiles"
+
 EOF
     chmod 0755 "$EXTRAS"
 fi

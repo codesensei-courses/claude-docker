@@ -1,22 +1,47 @@
 # claude-docker
 
-Run [Claude Code](https://claude.ai/code) inside a Debian container, against any
-project on your machine, with a single short command.
+Run [Claude Code](https://claude.ai/code) inside a Debian container, against any project on your machine, with a single short command.
 
-Similar in spirit to Anthropic's official Claude sandbox image, but more
-convenient for everyday use: your login, theme, and other Claude settings are
-persisted across runs, easy customization, and more.
+The docker container will be isolated - with access only to a specific project, but your login, theme, and other Claude settings are persisted across runs and across projects. 
 
 After installing this, you just run `claude-docker ~/some-project` to instantly have claude running in any project.
 
 ## Features
 - Persists claude login and global settings like theme
-- Add some nice things (man pages, nano, ripgrep, tmux, ...)
-- Complete terminal setup including TERM, timezone and locale
-- Add custom packages and settings to the dockerfile
+- Add some nice things (man pages, bat, ripgrep, tmux, ...)
+- Automatically detects setup including TERM, timezone, locale, editor (vim/nano/emacs)
+- Very easy to mount extra files and add custom packages and settings to the dockerfile
 - Automatically start and attach to tmux session
 
-## Installation
+## Quick Start
+
+Clone this repo, then run
+``` sh
+./install.sh
+```
+
+That's it. After that you should be able to run 
+
+``` sh
+claude-docker ~/somedir_myproject
+```
+
+Or, if you are currently in a project:
+``` sh
+# Start claude right here
+claude-docker .
+```
+
+And that's it! This will start a docker container for running claude, with only access to this project.
+
+The first time, this will ask you some question about configuration (you can just accept the defaults) and it will build a Docker image for you. T
+
+## Mounting extra files
+You might want to make a certain file available in all your editing sessions (like your gitconfig or your editor config)
+
+TODO add a friendly beginner explanation with an example of 
+
+# Installation
 
 Requirements: Docker, Bash, Linux or Mac OS.
 

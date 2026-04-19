@@ -10,16 +10,17 @@ fi
 PROJECT_ABS="$(realpath "$1")"
 PROJECT_NAME="$(basename "$PROJECT_ABS")"
 
-# Ensure host state files exist (same as make claude-state)
-mkdir -p ~/.claude-docker
-touch ~/.claude-docker/.credentials.json ~/.claude-docker/.claude.json
-chmod 600 ~/.claude-docker/.credentials.json
+# Ensure host state files exist (XDG Base Directory compliant)
+CLAUDE_DOCKER_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/claude-docker"
+mkdir -p "$CLAUDE_DOCKER_DATA"
+touch "$CLAUDE_DOCKER_DATA/.credentials.json" "$CLAUDE_DOCKER_DATA/.claude.json"
+chmod 600 "$CLAUDE_DOCKER_DATA/.credentials.json"
 
 # Attach to existing session or start a new container
 docker exec -it live-courses tmux attach 2>/dev/null || \
 docker run -it --rm  \
     --mount type=bind,source="$PROJECT_ABS",destination="/home/codesensei/$PROJECT_NAME" \
-    -v ~/.claude-docker/.credentials.json:/home/codesensei/.claude/.credentials.json \
-    -v ~/.claude-docker/.claude.json:/home/codesensei/.claude.json \
+    -v "$CLAUDE_DOCKER_DATA/.credentials.json":/home/codesensei/.claude/.credentials.json \
+    -v "$CLAUDE_DOCKER_DATA/.claude.json":/home/codesensei/.claude.json \
     live-courses \
     tmux new-session claude

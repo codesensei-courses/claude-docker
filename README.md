@@ -9,7 +9,7 @@ After installing this, you just run `claude-docker ~/some-project` to instantly 
 ## Features
 - Persists claude login and global settings like theme
 - Add some nice things (man pages, bat, ripgrep, tmux, ...)
-- Automatically detects setup including TERM, timezone, locale, editor (vim/nano/emacs)
+- Automatically detects setup including timezone, locale, editor (vim/nano/emacs)
 - Very easy to mount extra files and add custom packages and settings to the dockerfile
 - Automatically start and attach to tmux session
 
@@ -244,11 +244,11 @@ run — useful for things like `.gitconfig`, `.ssh`, or an `.emacs.d`. Both live
 under `~/.local/share/claude-docker/` and are read by the launcher; neither
 requires rebuilding the image.
 
-> **Note:** mount changes take effect only when a **new** container starts.
-> If a `claude-docker` container is already running, the launcher attaches to
-> its existing tmux session and reuses the mounts that were set when it was
-> first launched. Exit the running container (so `docker run` fires fresh on
-> the next invocation) for changes to `mounts.conf` or `home/` to apply.
+> **Note:** mount changes take effect only when a **new** container
+> starts. If a `claude-docker` container is already running, this
+> reuses the mounts that were set when it was first launched. Exit the
+> running container (so `docker run` fires fresh on the next
+> invocation) for changes to `mounts.conf` or `home/` to apply.
 
 ### 1. Home overlay directory
 

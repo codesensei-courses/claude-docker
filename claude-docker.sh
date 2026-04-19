@@ -29,8 +29,8 @@ STATE_DIR="$CLAUDE_DOCKER_DATA/state"
 # Build the image if it doesn't exist yet
 if ! docker image inspect claude-docker:latest &>/dev/null; then
     echo "Docker image 'claude-docker:latest' not found."
-    read -rp "Build it now? [y/N] " answer
-    if [[ "$answer" =~ ^[Yy]$ ]]; then
+    read -rp "Build it now? [Y/n] " answer
+    if [[ ! "$answer" =~  ^[Nn]$ ]]; then
         BUILD_ARGS=(--build-arg UID="$(id -u)")
         if [[ -n "${LANG:-}" ]]; then
             read -rp "Match host locale '$LANG' in the image? [Y/n] " loc_answer
@@ -72,7 +72,14 @@ if ! docker image inspect claude-docker:latest &>/dev/null; then
             esac
         done
         if [[ -n "$DETECTED_EDITOR" && "$DETECTED_EDITOR" != "nano" ]]; then
-            read -rp "Install host editor '$DETECTED_EDITOR' in the image? [Y/n] " ed_answer
+            prompt_name="$DETECTED_EDITOR"
+            if [[ "$DETECTED_EDITOR" == "emacsclient" ]]; then
+                prompt_name="emacs"
+                echo "Note: your EDITOR is emacsclient — installing emacs and setting"
+                echo "      EDITOR to \"emacsclient -t -a ''\" so tools open a terminal"
+                echo "      frame and an emacs daemon auto-starts on first use."
+            fi
+            read -rp "Install host editor '$prompt_name' in the image? [Y/n] " ed_answer
             if [[ ! "$ed_answer" =~ ^[Nn]$ ]]; then
                 BUILD_ARGS+=(--build-arg EDITOR_CHOICE="$DETECTED_EDITOR")
                 if [[ "$DETECTED_EDITOR" == "emacsclient" ]]; then

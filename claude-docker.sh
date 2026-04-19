@@ -141,12 +141,40 @@ if [ -d "$HOME_OVERLAY" ]; then
     shopt -u dotglob nullglob
 fi
 
+# ── Per-project Claude state ─────────────────────────────────────────────────
+# Session transcripts and prompt history are persisted on the host, keyed by
+# the same hash we use for the container name, so each project gets its own
+# isolated history that survives container removal (--rm).
+#
+# We mount individual subpaths of ~/.claude/ rather than using CLAUDE_CONFIG_DIR
+# to relocate the whole dir. CLAUDE_CONFIG_DIR would also move .credentials.json
+# into the per-project folder — forcing a re-auth for every project and
+# scattering auth tokens across project state dirs. Keeping credentials.json
+# and claude.json global (mounted below) avoids that.
+#
+# We persist:
+#   projects/       — session transcripts (JSONL), enables --resume / --continue
+#   history.jsonl   — up-arrow prompt recall
+#   todos/          — TaskCreate/TaskUpdate state
+#
+# We intentionally do NOT persist shell-snapshots/. Those capture the shell's
+# functions/aliases/env so the Bash tool can replay them cheaply. Inside this
+# container the shell is the container's own bash sourcing the Dockerfile-built
+# .bashrc (PS1, PATH, COLORTERM) — not your host shell — so the snapshots are
+# small and not worth the mount.
+PROJECT_STATE="$STATE_DIR/projects/$PROJECT_HASH"
+mkdir -p "$PROJECT_STATE"/sessions "$PROJECT_STATE"/todos
+touch "$PROJECT_STATE/history.jsonl"
+
 # Attach to existing session or start a new container
 docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null || \
 docker run -it --rm --name "$CONTAINER_NAME" \
     --mount type=bind,source="$PROJECT_ABS",destination="/home/codesensei/$PROJECT_NAME" \
     -v "$STATE_DIR/credentials.json":/home/codesensei/.claude/.credentials.json \
     -v "$STATE_DIR/claude.json":/home/codesensei/.claude.json \
+    -v "$PROJECT_STATE/sessions":/home/codesensei/.claude/projects \
+    -v "$PROJECT_STATE/history.jsonl":/home/codesensei/.claude/history.jsonl \
+    -v "$PROJECT_STATE/todos":/home/codesensei/.claude/todos \
     ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"} \
     -w "/home/codesensei/$PROJECT_NAME" \
     claude-docker \

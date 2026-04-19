@@ -26,15 +26,16 @@ fi
 # Ensure host state files exist (XDG Base Directory compliant)
 CLAUDE_DOCKER_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/claude-docker"
 mkdir -p "$CLAUDE_DOCKER_DATA"
-touch "$CLAUDE_DOCKER_DATA/.credentials.json" "$CLAUDE_DOCKER_DATA/.claude.json"
-chmod 600 "$CLAUDE_DOCKER_DATA/.credentials.json"
+touch "$CLAUDE_DOCKER_DATA/credentials.json"
+chmod 600 "$CLAUDE_DOCKER_DATA/credentials.json"
+[ -e "$CLAUDE_DOCKER_DATA/claude.json" ] || echo '{}' > "$CLAUDE_DOCKER_DATA/claude.json"
 
 # Attach to existing session or start a new container
 docker exec -it claude-docker tmux attach 2>/dev/null || \
 docker run -it --rm  \
     --mount type=bind,source="$PROJECT_ABS",destination="/home/codesensei/$PROJECT_NAME" \
-    -v "$CLAUDE_DOCKER_DATA/.credentials.json":/home/codesensei/.claude/.credentials.json \
-    -v "$CLAUDE_DOCKER_DATA/.claude.json":/home/codesensei/.claude.json \
+    -v "$CLAUDE_DOCKER_DATA/credentials.json":/home/codesensei/.claude/.credentials.json \
+    -v "$CLAUDE_DOCKER_DATA/claude.json":/home/codesensei/.claude.json \
     -w "/home/codesensei/$PROJECT_NAME" \
     claude-docker \
     tmux new-session claude

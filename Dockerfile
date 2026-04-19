@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     gnupg \
-    # Requested tools
+    fd \
+    fzf \
     git \
     less\
     locales\

@@ -120,13 +120,35 @@ and Claude Code launches automatically.
 
 ## What gets persisted
 
-Stored on the host under `~/.local/share/claude-docker/state/` and bind-mounted
-into the container:
+State lives on the host under `~/.local/share/claude-docker/state/` and is
+bind-mounted into the container. Two tiers:
+
+**Global** (shared across all projects):
 
 - `credentials.json` — your Claude login, so you only authenticate once.
 - `claude.json` — theme, onboarding state, and other Claude Code settings.
 
-Everything else in the container is ephemeral.
+**Per-project** (under `state/projects/<hash>/`, keyed by the absolute path of
+the project directory so same-named projects in different locations stay
+isolated):
+
+- `sessions/` — Claude Code session transcripts, enabling `claude -c` /
+  `claude -r` to resume prior conversations for this project.
+- `history.jsonl` — Claude Code prompt history (up-arrow recall inside Claude).
+- `todos/` — TaskCreate/TaskUpdate state.
+- `bash_history` — shell history for the container's bash. Scoped per-project
+  so up-arrow doesn't dredge up commands referencing a different project's
+  paths.
+
+Everything else in the container is ephemeral (it runs with `--rm`).
+
+> **Secrets in bash history:** the container sets `HISTCONTROL=ignoreboth`,
+> which means any command typed with a **leading space** is not saved to
+> history. Handy when you occasionally need to paste a token or password on
+> the command line — prefix with a space and it won't land in the persisted
+> `bash_history`. Note this only affects bash's own history; the command is
+> still visible to other processes (e.g. `ps`) while it runs, so prefer
+> `--token-file`, stdin, or env vars when the tool supports them.
 
 ## Mounting extra files (dotfiles, configs, ...)
 

@@ -113,6 +113,11 @@ RUN echo 'eval "$(fzf --bash)"' >> /home/codesensei/.bashrc
 RUN echo 'alias cat="bat"'
 RUN echo 'export MANPAGER="bat -plman"' >> /home/codesensei/.bashrc
 
+# ── Bash history ─────────────────────────────────────────────────────────────
+# Mounted per-project from the host. ignoreboth = ignorespace + ignoredups:
+# commands starting with a space stay out of history (safer secret entry).
+RUN echo 'export HISTCONTROL=ignoreboth' >> /home/codesensei/.bashrc
+
 # ── MOTD: claude session cheatsheet ──────────────────────────────────────────
 # Shown on every new interactive bash shell (e.g. when a tmux window is opened
 # inside the container). Colors match the PS1 prompt: cyan rules, hot-pink

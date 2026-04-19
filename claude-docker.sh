@@ -178,6 +178,7 @@ fi
 PROJECT_STATE="$STATE_DIR/projects/$PROJECT_HASH"
 mkdir -p "$PROJECT_STATE"/sessions "$PROJECT_STATE"/todos
 touch "$PROJECT_STATE/history.jsonl"
+touch "$PROJECT_STATE/bash_history"
 
 # Attach to existing session or start a new container
 docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null || \
@@ -188,6 +189,7 @@ docker run -it --rm --name "$CONTAINER_NAME" \
     -v "$PROJECT_STATE/sessions":/home/codesensei/.claude/projects \
     -v "$PROJECT_STATE/history.jsonl":/home/codesensei/.claude/history.jsonl \
     -v "$PROJECT_STATE/todos":/home/codesensei/.claude/todos \
+    -v "$PROJECT_STATE/bash_history":/home/codesensei/.bash_history \
     ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"} \
     -w "/home/codesensei/$PROJECT_NAME" \
     claude-docker \

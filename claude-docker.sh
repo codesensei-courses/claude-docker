@@ -21,6 +21,12 @@ if ! docker image inspect claude-docker:latest &>/dev/null; then
     read -rp "Build it now? [y/N] " answer
     if [[ "$answer" =~ ^[Yy]$ ]]; then
         docker build --build-arg UID="$(id -u)" -t claude-docker:latest "$IMAGE_DIR"
+        echo
+        echo "Tip: customize your image by editing"
+        echo "    $IMAGE_DIR/build-extras.sh"
+        echo "then remove the image (docker image rm claude-docker:latest) and"
+        echo "re-run this command to rebuild."
+        echo
     else
         echo "Aborted." >&2
         exit 1

@@ -106,6 +106,13 @@ ENV PATH="/home/codesensei/.local/bin:/home/codesensei/.claude/bin:${PATH}"
 ENV COLORTERM=truecolor
 RUN echo 'export COLORTERM=truecolor' >> /home/codesensei/.bashrc
 
+# ── User-defined build extras ────────────────────────────────────────────────
+# Runs a user-editable script as the final build step. The default ships as
+# a no-op; edit build-extras.sh (in the image build context) to install extra
+# packages, drop in dotfiles, etc. See that file's header for details.
+COPY --chown=codesensei:codesensei build-extras.sh /tmp/build-extras.sh
+RUN chmod +x /tmp/build-extras.sh && /tmp/build-extras.sh && rm /tmp/build-extras.sh
+
 # ── Default working directory & entrypoint ───────────────────────────────────
 WORKDIR /home/codesensei
 

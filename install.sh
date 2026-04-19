@@ -9,6 +9,12 @@ mkdir -p "$DATA_DIR/image" "$BIN_DIR"
 install -m 0644 "$SRC_DIR/Dockerfile" "$DATA_DIR/image/Dockerfile"
 install -m 0755 "$SRC_DIR/claude-docker.sh" "$BIN_DIR/claude-docker"
 
+# build-extras.sh is user-editable — install the default only if missing,
+# so repeated install.sh runs don't clobber local customizations.
+if [ ! -e "$DATA_DIR/image/build-extras.sh" ]; then
+    install -m 0755 "$SRC_DIR/build-extras.sh" "$DATA_DIR/image/build-extras.sh"
+fi
+
 echo "Installed claude-docker to $BIN_DIR/claude-docker"
 echo "Image context: $DATA_DIR/image"
 

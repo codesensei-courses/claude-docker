@@ -24,12 +24,15 @@ cd claude-docker
 ./install.sh
 ```
 
-`install.sh` places two things on your system (XDG-compliant paths, overridable
+`install.sh` places the following on your system (XDG-compliant paths, overridable
 via `XDG_BIN_HOME` and `XDG_DATA_HOME`):
 
 - `~/.local/bin/claude-docker` — the launcher script.
 - `~/.local/share/claude-docker/image/Dockerfile` — the build context used the
   first time you run the launcher.
+- `~/.local/share/claude-docker/image/build-extras.sh` — a user-editable hook
+  script run at the end of the build. Empty by default; see *Customizing the
+  build* below.
 
 Make sure `~/.local/bin` is on your `PATH` — `install.sh` will warn you if it
 isn't. The Docker image itself is not built at install time; it's built on
@@ -79,6 +82,24 @@ into the container:
 - `claude.json` — theme, onboarding state, and other Claude Code settings.
 
 Everything else in the container is ephemeral.
+
+## Customizing the build
+
+`~/.local/share/claude-docker/image/build-extras.sh` is a hook script that runs
+as the `codesensei` user at the end of the Docker build. Edit it to install
+extra packages, drop in dotfiles, or otherwise customize your image.
+Passwordless `sudo` is available for anything that needs root.
+
+The file ships as a no-op with commented examples. After editing, rebuild the
+image:
+
+```sh
+docker image rm claude-docker:latest
+claude-docker ~/dev/my_website
+```
+
+Your edits are preserved across upgrades: `install.sh` only writes the default
+`build-extras.sh` if the file does not already exist.
 
 ## Rebuild / update
 

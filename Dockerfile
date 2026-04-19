@@ -3,6 +3,7 @@ FROM debian:bookworm
 # ── System packages ──────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Core utilities
+    bat \
     curl \
     ca-certificates \
     gnupg \
@@ -12,7 +13,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     locales\
     man-db \
     manpages \
-    nano\
     ripgrep \
     tmux \
     # Claude Code sandbox (OS-level network/filesystem isolation)
@@ -21,12 +21,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     locales \
     sudo\
     tzdata \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-ENV DEVCONTAINER=true
-# Set the default editor and visual
-ENV EDITOR=nano
-ENV VISUAL=nano
+
+# ── Editor ───────────────────────────────────────────────────────────────────
+# Chosen at install time based on the host's $EDITOR / $VISUAL. Defaults to
+# nano. Supported values: nano, vim, emacs. EDITOR/VISUAL are set to match so
+# tools like git fall through to the same binary.
+# Usage: docker build --build-arg EDITOR_CHOICE=vim ...
+ARG EDITOR_CHOICE=nano
+RUN case "$EDITOR_CHOICE" in \
+        vim)   PKG=vim ;; \
+        emacs) PKG=emacs-nox ;; \
+        nano)  PKG=nano ;; \
+        *)     echo "Unknown EDITOR_CHOICE: $EDITOR_CHOICE" >&2; exit 1 ;; \
+    esac \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends "$PKG" \
+    && rm -rf /var/lib/apt/lists/*
+ENV EDITOR=${EDITOR_CHOICE}
+ENV VISUAL=${EDITOR_CHOICE}
 
 # ── Locale ───────────────────────────────────────────────────────────────────
 # If the launcher detected a host LANG and the user accepted, generate and

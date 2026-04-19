@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     locales\
     man-db \
     manpages \
+    nano \
     ripgrep \
     tmux \
     # Claude Code sandbox (OS-level network/filesystem isolation)

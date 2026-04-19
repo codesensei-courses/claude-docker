@@ -2,14 +2,23 @@
 set -euo pipefail
 
 MODE=claude
+MODE_FLAG=""
 CUSTOM_CMD=""
 YOLO=0
+
+set_mode() {
+    if [[ -n "$MODE_FLAG" && "$MODE_FLAG" != "$1" ]]; then
+        echo "Error: -$1 conflicts with -$MODE_FLAG; pick one of -t, -b, -c, -e" >&2
+        exit 1
+    fi
+    MODE_FLAG="$1"
+}
 while getopts ":tbce:y" opt; do
     case "$opt" in
-        t)  MODE=tmux ;;
-        b)  MODE=bash ;;
-        c)  MODE=claude ;;
-        e)  MODE=exec; CUSTOM_CMD="$OPTARG" ;;
+        t)  set_mode t; MODE=tmux ;;
+        b)  set_mode b; MODE=bash ;;
+        c)  set_mode c; MODE=claude ;;
+        e)  set_mode e; MODE=exec; CUSTOM_CMD="$OPTARG" ;;
         y)  YOLO=1 ;;
         :)  echo "Option -$OPTARG requires an argument" >&2; exit 1 ;;
         \?) echo "Unknown option: -$OPTARG" >&2; exit 1 ;;

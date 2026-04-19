@@ -194,16 +194,22 @@ mkdir -p "$PROJECT_STATE"/sessions "$PROJECT_STATE"/todos
 touch "$PROJECT_STATE/history.jsonl"
 touch "$PROJECT_STATE/bash_history"
 
-# Attach to existing session or start a new container
-if [[ "$MODE" == tmux ]] && docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null; then
-    exit 0
-fi
-
 case "$MODE" in
     tmux)   RUN_CMD=(tmux new-session claude) ;;
     bash)   RUN_CMD=(bash) ;;
     claude) RUN_CMD=(bash -c 'claude -c || claude') ;;
 esac
+
+# If the container is already running (e.g. a second `claude-docker ~/proj`
+# invocation), exec into it rather than trying to `docker run --name ...`
+# again — which would fail with a name collision. For tmux we try attaching
+# to the existing session first; otherwise we exec RUN_CMD in the container.
+if [[ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null)" == "true" ]]; then
+    if [[ "$MODE" == tmux ]] && docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null; then
+        exit 0
+    fi
+    exec docker exec -it "$CONTAINER_NAME" "${RUN_CMD[@]}"
+fi
 
 docker run -it --rm --name "$CONTAINER_NAME" \
     --mount type=bind,source="$PROJECT_ABS",destination="/home/codesensei/$PROJECT_NAME" \

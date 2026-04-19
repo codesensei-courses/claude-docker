@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     gnupg \
     fd-find \
-    fzf \
     git \
     less\
     locales\
@@ -90,6 +89,12 @@ RUN useradd -m -u ${UID} -s /bin/bash codesensei \
 USER codesensei
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
+# ── fzf (from GitHub) ────────────────────────────────────────────────────────
+# Installed from upstream rather than apt so we get the latest release and
+# the bundled key-bindings/completion installer.
+RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf \
+    && ~/.fzf/install --all
+
 # ── Bash prompt ───────────────────────────────────────────────────────────────
 # Bright cyan bracket label "[🐳 docker]" + bold green user@host + blue path.
 # Makes it immediately obvious you are inside the container.
@@ -108,10 +113,9 @@ ENV PATH="/home/codesensei/.local/bin:/home/codesensei/.claude/bin:${PATH}"
 ENV COLORTERM=truecolor
 RUN echo 'export COLORTERM=truecolor' >> /home/codesensei/.bashrc
 
-# --- fzf, bat
-RUN echo 'eval "$(fzf --bash)"' >> /home/codesensei/.bashrc
-RUN echo 'alias cat="bat"'
-RUN echo 'export MANPAGER="bat -plman"' >> /home/codesensei/.bashrc
+# --- bat
+RUN echo 'alias cat="batcat"'
+RUN echo 'export MANPAGER="batcat -plman"' >> /home/codesensei/.bashrc
 
 # ── Bash history ─────────────────────────────────────────────────────────────
 # Mounted per-project from the host. ignoreboth = ignorespace + ignoredups:

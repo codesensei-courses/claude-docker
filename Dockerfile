@@ -92,7 +92,7 @@ RUN /home/codesensei/.local/bin/uv tool install dotdrop \
 # Makes it immediately obvious you are inside the container.
 RUN echo '' >> /home/codesensei/.bashrc \
     && echo '# ── Docker container prompt ──────────────────────────────────' >> /home/codesensei/.bashrc \
-    && echo 'export PS1="\[\e[0;96m\][🐳 live_courses]\[\e[0m\] \[\e[1;38;2;255;105;180m\]\u\[\e[0m\]:\[\e[0;34m\]\w\[\e[0m\]\$ "' >> /home/codesensei/.bashrc
+    && echo 'export PS1="\[\e[0;96m\][🐳 claude-docker]\[\e[0m\] \[\e[1;38;2;255;105;180m\]\u\[\e[0m\]:\[\e[0;34m\]\w\[\e[0m\]\$ "' >> /home/codesensei/.bashrc
 
 # ── PATH ─────────────────────────────────────────────────────────────────────
 RUN echo 'export PATH="$HOME/.local/bin:$HOME/.claude/bin:$PATH"' \

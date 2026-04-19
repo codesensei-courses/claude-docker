@@ -10,6 +10,19 @@ fi
 PROJECT_ABS="$(realpath "$1")"
 PROJECT_NAME="$(basename "$PROJECT_ABS")"
 
+# Build the image if it doesn't exist yet
+if ! docker image inspect claude-docker:latest &>/dev/null; then
+    echo "Docker image 'claude-docker:latest' not found."
+    read -rp "Build it now? [y/N] " answer
+    if [[ "$answer" =~ ^[Yy]$ ]]; then
+        SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+        docker build --build-arg UID="$(id -u)" -t claude-docker:latest "$SCRIPT_DIR"
+    else
+        echo "Aborted." >&2
+        exit 1
+    fi
+fi
+
 # Ensure host state files exist (XDG Base Directory compliant)
 CLAUDE_DOCKER_DATA="${XDG_DATA_HOME:-$HOME/.local/share}/claude-docker"
 mkdir -p "$CLAUDE_DOCKER_DATA"

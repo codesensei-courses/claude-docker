@@ -227,6 +227,12 @@ esac
 # again — which would fail with a name collision. For tmux we try attaching
 # to the existing session first; otherwise we exec RUN_CMD in the container.
 if [[ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null)" == "true" ]]; then
+    if [[ "$YOLO" == 1 ]]; then
+        echo "Error: -y has no effect on an already-running container; the existing" >&2
+        echo "       Claude process keeps the permission mode it was launched with." >&2
+        echo "       Exit the running container ($CONTAINER_NAME) and re-run with -y." >&2
+        exit 1
+    fi
     if [[ "$MODE" == tmux ]] && docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null; then
         exit 0
     fi

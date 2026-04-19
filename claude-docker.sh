@@ -55,23 +55,29 @@ if ! docker image inspect claude-docker:latest &>/dev/null; then
             fi
         fi
         # Detect host editor from $EDITOR / $VISUAL. Recognized binaries map
-        # to: vim|vi → vim, nano → nano, emacs|emacsclient → emacs-nox.
-        # Anything else (or unset) falls through to the Dockerfile default
-        # (nano).
+        # to: vim|vi → vim, nano → nano, emacs → emacs, emacsclient →
+        # emacsclient (installs emacs-nox; EDITOR is set to "emacsclient -t
+        # -a ''" so it opens a terminal frame and auto-starts the daemon on
+        # first use). Anything else (or unset) falls through to the
+        # Dockerfile default (nano).
         DETECTED_EDITOR=""
         for candidate in "${EDITOR:-}" "${VISUAL:-}"; do
             [[ -z "$candidate" ]] && continue
             bin="$(basename "${candidate%% *}")"
             case "$bin" in
-                vim|vi)            DETECTED_EDITOR="vim";   break ;;
-                nano)              DETECTED_EDITOR="nano";  break ;;
-                emacs|emacsclient) DETECTED_EDITOR="emacs"; break ;;
+                vim|vi)      DETECTED_EDITOR="vim";         break ;;
+                nano)        DETECTED_EDITOR="nano";        break ;;
+                emacs)       DETECTED_EDITOR="emacs";       break ;;
+                emacsclient) DETECTED_EDITOR="emacsclient"; break ;;
             esac
         done
         if [[ -n "$DETECTED_EDITOR" && "$DETECTED_EDITOR" != "nano" ]]; then
             read -rp "Install host editor '$DETECTED_EDITOR' in the image? [Y/n] " ed_answer
             if [[ ! "$ed_answer" =~ ^[Nn]$ ]]; then
                 BUILD_ARGS+=(--build-arg EDITOR_CHOICE="$DETECTED_EDITOR")
+                if [[ "$DETECTED_EDITOR" == "emacsclient" ]]; then
+                    BUILD_ARGS+=(--build-arg EDITOR_CMD="emacsclient -t -a ''")
+                fi
             fi
         fi
         docker build "${BUILD_ARGS[@]}" -t claude-docker:latest "$IMAGE_DIR"

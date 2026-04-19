@@ -26,22 +26,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 # ── Editor ───────────────────────────────────────────────────────────────────
-# Chosen at install time based on the host's $EDITOR / $VISUAL. Defaults to
-# nano. Supported values: nano, vim, emacs. EDITOR/VISUAL are set to match so
-# tools like git fall through to the same binary.
+# Chosen at build time based on the host's $EDITOR / $VISUAL. Defaults to
+# nano. Supported EDITOR_CHOICE values: nano, vim, emacs, emacsclient.
+# EDITOR_CMD is what tools actually invoke; defaults to EDITOR_CHOICE. For
+# emacsclient the launcher passes "emacsclient -t -a ''" so tools open a
+# terminal frame and emacsclient auto-starts a daemon on first use if none
+# is running.
 # Usage: docker build --build-arg EDITOR_CHOICE=vim ...
 ARG EDITOR_CHOICE=nano
+ARG EDITOR_CMD=$EDITOR_CHOICE
 RUN case "$EDITOR_CHOICE" in \
-        vim)   PKG=vim ;; \
-        emacs) PKG=emacs-nox ;; \
-        nano)  PKG=nano ;; \
-        *)     echo "Unknown EDITOR_CHOICE: $EDITOR_CHOICE" >&2; exit 1 ;; \
+        vim)               PKG=vim ;; \
+        nano)              PKG=nano ;; \
+        emacs|emacsclient) PKG=emacs-nox ;; \
+        *)                 echo "Unknown EDITOR_CHOICE: $EDITOR_CHOICE" >&2; exit 1 ;; \
     esac \
     && apt-get update \
     && apt-get install -y --no-install-recommends "$PKG" \
     && rm -rf /var/lib/apt/lists/*
-ENV EDITOR=${EDITOR_CHOICE}
-ENV VISUAL=${EDITOR_CHOICE}
+ENV EDITOR="${EDITOR_CMD}"
+ENV VISUAL="${EDITOR_CMD}"
 
 # ── Locale ───────────────────────────────────────────────────────────────────
 # If the launcher detected a host LANG and the user accepted, generate and

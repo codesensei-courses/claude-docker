@@ -37,9 +37,16 @@ And that's it! This will start a docker container for running claude, with only 
 The first time, this will ask you some question about configuration (you can just accept the defaults) and it will build a Docker image for you. T
 
 ## Mounting extra files
-You might want to make a certain file available in all your editing sessions (like your gitconfig or your editor config)
+You might want to make a certain file available in all your editing sessions (like your gitconfig or your editor config).
 
-TODO add a friendly beginner explanation with an example of 
+The easiest way is to drop the file (or a symlink to it) into `~/.local/share/claude-docker/home/`. Anything there shows up at the matching path under `/home/codesensei/` inside the container on every run:
+
+```sh
+ln -s ~/.gitconfig ~/.local/share/claude-docker/home/.gitconfig
+```
+
+That's it — your next `claude-docker` session will have your `~/.gitconfig` available. For read-only mounts, paths outside `$HOME`, or other advanced cases, see the *Mounting extra files (dotfiles, configs, ...)* section further down.
+
 
 # Installation
 

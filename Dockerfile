@@ -29,15 +29,21 @@ ENV EDITOR=nano
 ENV VISUAL=nano
 
 # ── Locale ───────────────────────────────────────────────────────────────────
-# Generate en_US.UTF-8 (default) and nl_NL.UTF-8 (Dutch). Without this, TUI
-# apps like Claude Code may misrender box-drawing and other Unicode glyphs.
-RUN sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen \
-    && sed -i 's/^# *\(nl_NL.UTF-8\)/\1/' /etc/locale.gen \
-    && locale-gen \
-    && update-locale LANG=en_US.UTF-8
-ENV LANG=en_US.UTF-8 \
-    LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8
+# If the launcher detected a host LANG and the user accepted, generate and
+# default to that locale. Otherwise fall back to C.UTF-8 (always available).
+# Without a UTF-8 locale, TUI apps like Claude Code may misrender box-drawing
+# and other Unicode glyphs.
+# Usage: docker build --build-arg LOCALE=en_US.UTF-8 ...
+ARG LOCALE
+RUN if [ -n "$LOCALE" ] \
+        && [ "$LOCALE" != "C" ] \
+        && [ "$LOCALE" != "C.UTF-8" ] \
+        && [ "$LOCALE" != "POSIX" ]; then \
+        echo "$LOCALE UTF-8" >> /etc/locale.gen \
+        && locale-gen \
+        && update-locale LANG="$LOCALE"; \
+    fi
+ENV LANG=${LOCALE:-C.UTF-8}
 
 # ── Timezone ─────────────────────────────────────────────────────────────────
 ENV TZ=Europe/Amsterdam

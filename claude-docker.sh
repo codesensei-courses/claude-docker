@@ -20,7 +20,14 @@ if ! docker image inspect claude-docker:latest &>/dev/null; then
     echo "Docker image 'claude-docker:latest' not found."
     read -rp "Build it now? [y/N] " answer
     if [[ "$answer" =~ ^[Yy]$ ]]; then
-        docker build --build-arg UID="$(id -u)" -t claude-docker:latest "$IMAGE_DIR"
+        BUILD_ARGS=(--build-arg UID="$(id -u)")
+        if [[ -n "${LANG:-}" ]]; then
+            read -rp "Match host locale '$LANG' in the image? [Y/n] " loc_answer
+            if [[ ! "$loc_answer" =~ ^[Nn]$ ]]; then
+                BUILD_ARGS+=(--build-arg LOCALE="$LANG")
+            fi
+        fi
+        docker build "${BUILD_ARGS[@]}" -t claude-docker:latest "$IMAGE_DIR"
         echo
         echo "Tip: customize your image by editing"
         echo "    $IMAGE_DIR/build-extras.sh"

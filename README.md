@@ -11,6 +11,7 @@ After installing this, you just run `claude-docker ~/some-project` to instantly 
 
 ## Features
 - Persists claude login and global settings like theme
+- Add some nice things (man pages, nano, ripgrep, tmux, ...)
 - Complete terminal setup including TERM, timezone and locale
 - Add custom packages and settings to the dockerfile
 - Automatically start and attach to tmux session

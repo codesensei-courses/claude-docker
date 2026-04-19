@@ -1,8 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+MODE=claude
+while getopts ":tbc" opt; do
+    case "$opt" in
+        t)  MODE=tmux ;;
+        b)  MODE=bash ;;
+        c)  MODE=claude ;;
+        \?) echo "Unknown option: -$OPTARG" >&2; exit 1 ;;
+    esac
+done
+shift $((OPTIND - 1))
+
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 <project-folder>" >&2
+    echo "Usage: $0 [-t|-b|-c] <project-folder>" >&2
+    echo "  -t  attach to existing tmux session, or start a new one" >&2
+    echo "  -b  start just a bash shell" >&2
+    echo "  -c  continue the claude session, or start a new one (default)" >&2
     echo "Example: $0 ~/dev/my_website" >&2
     exit 1
 fi
@@ -181,7 +195,16 @@ touch "$PROJECT_STATE/history.jsonl"
 touch "$PROJECT_STATE/bash_history"
 
 # Attach to existing session or start a new container
-docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null || \
+if [[ "$MODE" == tmux ]] && docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null; then
+    exit 0
+fi
+
+case "$MODE" in
+    tmux)   RUN_CMD=(tmux new-session claude) ;;
+    bash)   RUN_CMD=(bash) ;;
+    claude) RUN_CMD=(bash -c 'claude -c || claude') ;;
+esac
+
 docker run -it --rm --name "$CONTAINER_NAME" \
     --mount type=bind,source="$PROJECT_ABS",destination="/home/codesensei/$PROJECT_NAME" \
     -v "$STATE_DIR/credentials.json":/home/codesensei/.claude/.credentials.json \
@@ -193,4 +216,4 @@ docker run -it --rm --name "$CONTAINER_NAME" \
     ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"} \
     -w "/home/codesensei/$PROJECT_NAME" \
     claude-docker \
-    tmux new-session claude
+    "${RUN_CMD[@]}"

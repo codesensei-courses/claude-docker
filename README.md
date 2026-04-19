@@ -113,10 +113,31 @@ claude-docker ~/dev/my_website
 ```
 
 On first run it will offer to build the image (a few minutes). On subsequent
-runs it starts instantly. 
+runs it starts instantly.
 
 Inside the container your project is mounted at `/home/codesensei/<project>`
 and Claude Code launches automatically.
+
+### Options
+
+Pick what runs inside the container with one of these mutually-exclusive flags
+(default is `-c`):
+
+- `-c` — continue the last Claude Code session for this project, or start a
+  new one if none exists. Equivalent to `claude -c || claude`.
+- `-t` — tmux mode. If a container for this project is already running,
+  attach to its tmux session; otherwise start a new container with Claude in
+  a fresh tmux session. Useful when you want to detach/reattach or have
+  multiple terminal windows share one Claude session.
+- `-b` — drop into a plain bash shell instead of launching Claude. Handy for
+  poking around the container, inspecting mounts, or running one-off commands
+  with the project's env.
+
+```sh
+claude-docker -t ~/dev/my_website    # tmux-backed session
+claude-docker -b ~/dev/my_website    # just a shell
+claude-docker ~/dev/my_website       # same as -c
+```
 
 ## What gets persisted
 

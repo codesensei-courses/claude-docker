@@ -62,12 +62,61 @@ touch "$STATE_DIR/credentials.json"
 chmod 600 "$STATE_DIR/credentials.json"
 [ -e "$STATE_DIR/claude.json" ] || echo '{}' > "$STATE_DIR/claude.json"
 
+# ── User-configured extra mounts ─────────────────────────────────────────────
+# Two mechanisms, both optional:
+#   1. $CLAUDE_DOCKER_DATA/mounts.conf — one "src:dst[:ro]" spec per line.
+#      Lines starting with # and blank lines are ignored. "~" in src expands
+#      to $HOME. Missing sources are warned about and skipped.
+#   2. $CLAUDE_DOCKER_DATA/home/       — anything here is bind-mounted at the
+#      matching path under /home/codesensei/ (e.g. home/.gitconfig →
+#      /home/codesensei/.gitconfig). Dotfiles included.
+EXTRA_MOUNTS=()
+
+MOUNTS_CONF="$CLAUDE_DOCKER_DATA/mounts.conf"
+if [ -r "$MOUNTS_CONF" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [ -z "$line" ] && continue
+
+        IFS=: read -r src dst opt <<< "$line"
+        src="${src/#\~/$HOME}"
+
+        if [ -z "$src" ] || [ -z "$dst" ]; then
+            echo "Warning: skipping malformed mounts.conf line: $line" >&2
+            continue
+        fi
+        if [ ! -e "$src" ]; then
+            echo "Warning: mount source does not exist, skipping: $src" >&2
+            continue
+        fi
+
+        spec="$src:$dst"
+        echo "Detected mount: $src -> $dst"
+        [ -n "${opt:-}" ] && spec="$spec:$opt"
+
+        EXTRA_MOUNTS+=(-v "$spec")
+    done < "$MOUNTS_CONF"
+fi
+
+HOME_OVERLAY="$CLAUDE_DOCKER_DATA/home"
+if [ -d "$HOME_OVERLAY" ]; then
+    shopt -s dotglob nullglob
+    for entry in "$HOME_OVERLAY"/*; do
+        name="$(basename "$entry")"
+        EXTRA_MOUNTS+=(-v "$entry:/home/codesensei/$name")
+    done
+    shopt -u dotglob nullglob
+fi
+
 # Attach to existing session or start a new container
 docker exec -it claude-docker tmux attach 2>/dev/null || \
 docker run -it --rm  \
     --mount type=bind,source="$PROJECT_ABS",destination="/home/codesensei/$PROJECT_NAME" \
     -v "$STATE_DIR/credentials.json":/home/codesensei/.claude/.credentials.json \
     -v "$STATE_DIR/claude.json":/home/codesensei/.claude.json \
+    ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"} \
     -w "/home/codesensei/$PROJECT_NAME" \
     claude-docker \
     tmux new-session claude

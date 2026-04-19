@@ -5,9 +5,40 @@ SRC_DIR="$(cd "$(dirname "$0")" && pwd)"
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/claude-docker"
 BIN_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"
 
-mkdir -p "$DATA_DIR/image" "$BIN_DIR"
+mkdir -p "$DATA_DIR/image" "$DATA_DIR/home" "$BIN_DIR"
 install -m 0644 "$SRC_DIR/Dockerfile" "$DATA_DIR/image/Dockerfile"
 install -m 0755 "$SRC_DIR/claude-docker.sh" "$BIN_DIR/claude-docker"
+
+# mounts.conf is user-editable — write the default only if missing, so
+# repeated install.sh runs don't clobber local customizations.
+MOUNTS_CONF="$DATA_DIR/mounts.conf"
+if [ ! -e "$MOUNTS_CONF" ]; then
+    cat > "$MOUNTS_CONF" <<'EOF'
+# ─── claude-docker mounts.conf ───────────────────────────────────────────────
+# Extra bind mounts to apply on every `claude-docker` run. One spec per line:
+#
+#     src:dst[:ro]
+#
+# - src: absolute path on the host. "~" expands to $HOME.
+# - dst: absolute path inside the container (typically under /home/codesensei).
+# - ro:  optional — mount read-only. Omit for read-write.
+#
+# Lines starting with # and blank lines are ignored. Missing sources produce
+# a warning and are skipped rather than failing the run.
+#
+# For the common case of "just make this file appear in my container home
+# dir", the overlay directory is often simpler — drop files or symlinks into:
+#     ~/.local/share/claude-docker/home/
+# and they are mounted at the matching path under /home/codesensei/.
+#
+# Examples (uncomment and adapt):
+#
+# ~/.gitconfig:/home/codesensei/.gitconfig:ro
+# ~/.ssh:/home/codesensei/.ssh:ro
+# ~/work/shared-notes:/home/codesensei/notes
+EOF
+    chmod 0644 "$MOUNTS_CONF"
+fi
 
 # build-extras.sh is user-editable — write the default only if missing, so
 # repeated install.sh runs don't clobber local customizations.

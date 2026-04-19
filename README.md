@@ -35,6 +35,9 @@ via `XDG_BIN_HOME` and `XDG_DATA_HOME`):
 - `~/.local/share/claude-docker/image/build-extras.sh` — a user-editable hook
   script run at the end of the build. Empty by default; see *Customizing the
   build* below.
+- `~/.local/share/claude-docker/mounts.conf` and
+  `~/.local/share/claude-docker/home/` — optional hooks for mounting extra
+  host files into the container on every run. See *Mounting extra files*.
 
 Make sure `~/.local/bin` is on your `PATH` — `install.sh` will warn you if it
 isn't. The Docker image itself is not built at install time; it's built on
@@ -84,6 +87,65 @@ into the container:
 - `claude.json` — theme, onboarding state, and other Claude Code settings.
 
 Everything else in the container is ephemeral.
+
+## Mounting extra files (dotfiles, configs, ...)
+
+Two optional mechanisms let you bring host files into the container on every
+run — useful for things like `.gitconfig`, `.ssh`, or an `.emacs.d`. Both live
+under `~/.local/share/claude-docker/` and are read by the launcher; neither
+requires rebuilding the image.
+
+> **Note:** mount changes take effect only when a **new** container starts.
+> If a `claude-docker` container is already running, the launcher attaches to
+> its existing tmux session and reuses the mounts that were set when it was
+> first launched. Exit the running container (so `docker run` fires fresh on
+> the next invocation) for changes to `mounts.conf` or `home/` to apply.
+
+### 1. Home overlay directory
+
+Anything you drop into `~/.local/share/claude-docker/home/` is bind-mounted at
+the matching path under `/home/codesensei/` inside the container. Simplest
+for the common case of "make my dotfiles appear in my home dir":
+
+```sh
+mkdir -p ~/.local/share/claude-docker/home
+ln -s ~/.gitconfig ~/.local/share/claude-docker/home/.gitconfig
+ln -s ~/.emacs.d   ~/.local/share/claude-docker/home/.emacs.d
+```
+
+Symlinks are fine — they're resolved by Docker at mount time, so edits on the
+host show up inside the container immediately. Dotfiles are included.
+
+Only entries that already exist in `home/` are mounted — new paths the
+container writes (e.g. `/home/codesensei/.cache/foo`) go to the container's
+ephemeral layer and disappear on exit. However, bind mounts are two-way, so
+if you overlay a *directory* (e.g. `.emacs.d/`), files the container writes
+inside it **will** appear on the host under
+`~/.local/share/claude-docker/home/.emacs.d/`. That's usually what you want
+for stateful tools (emacs caches, shell history), but if you'd rather keep
+the host copy pristine, use `mounts.conf` with `:ro` instead.
+
+### 2. `mounts.conf` — explicit mount specs
+
+For mounts that don't fit the "home overlay" model (files outside `$HOME`,
+read-only mounts, custom destination paths), create
+`~/.local/share/claude-docker/mounts.conf` with one spec per line:
+
+```
+# Format: src:dst[:ro]     — # and blank lines are comments
+# "~" in src expands to $HOME.
+
+~/.gitconfig:/home/codesensei/.gitconfig:ro
+~/.ssh:/home/codesensei/.ssh:ro
+~/work/shared-notes:/home/codesensei/notes
+```
+
+Missing sources are warned about and skipped rather than failing the run. Use
+the `:ro` suffix for anything you don't want the container to be able to
+modify (credentials, shared configs).
+
+You can combine both mechanisms; specs from `mounts.conf` and entries from
+`home/` are all passed to `docker run`.
 
 ## Customizing the build
 

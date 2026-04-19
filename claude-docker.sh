@@ -3,12 +3,14 @@ set -euo pipefail
 
 MODE=claude
 CUSTOM_CMD=""
-while getopts ":tbce:" opt; do
+YOLO=0
+while getopts ":tbce:y" opt; do
     case "$opt" in
         t)  MODE=tmux ;;
         b)  MODE=bash ;;
         c)  MODE=claude ;;
         e)  MODE=exec; CUSTOM_CMD="$OPTARG" ;;
+        y)  YOLO=1 ;;
         :)  echo "Option -$OPTARG requires an argument" >&2; exit 1 ;;
         \?) echo "Unknown option: -$OPTARG" >&2; exit 1 ;;
     esac
@@ -16,11 +18,12 @@ done
 shift $((OPTIND - 1))
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 [-t|-b|-c|-e <cmd>] <project-folder>" >&2
+    echo "Usage: $0 [-t|-b|-c|-e <cmd>] [-y] <project-folder>" >&2
     echo "  -t         attach to existing tmux session, or start a new one" >&2
     echo "  -b         start just a bash shell" >&2
     echo "  -c         continue the claude session, or start a new one (default)" >&2
     echo "  -e <cmd>   run a custom command via bash -c (supports &&, ||, pipes)" >&2
+    echo "  -y         run claude with --dangerously-skip-permissions (yolo mode)" >&2
     echo "Example: $0 ~/dev/my_website" >&2
     echo "         $0 -e 'npm test && npm run build' ~/dev/my_website" >&2
     exit 1
@@ -198,10 +201,15 @@ mkdir -p "$PROJECT_STATE"/sessions "$PROJECT_STATE"/todos
 touch "$PROJECT_STATE/history.jsonl"
 touch "$PROJECT_STATE/bash_history"
 
+CLAUDE_FLAGS=""
+if [[ "$YOLO" == 1 ]]; then
+    CLAUDE_FLAGS="--dangerously-skip-permissions"
+fi
+
 case "$MODE" in
-    tmux)   RUN_CMD=(tmux new-session claude) ;;
+    tmux)   RUN_CMD=(tmux new-session "claude $CLAUDE_FLAGS") ;;
     bash)   RUN_CMD=(bash) ;;
-    claude) RUN_CMD=(bash -c 'claude -c || claude') ;;
+    claude) RUN_CMD=(bash -c "claude -c $CLAUDE_FLAGS || claude $CLAUDE_FLAGS") ;;
     exec)   RUN_CMD=(bash -c "$CUSTOM_CMD") ;;
 esac
 

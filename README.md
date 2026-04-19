@@ -136,11 +136,19 @@ Pick what runs inside the container with one of these mutually-exclusive flags
   The command string is passed to bash unchanged, so shell syntax like `&&`,
   `||`, pipes, and redirections all work. Quote the whole command to keep
   your host shell from interpreting it first.
+- `-y` — yolo mode: run Claude with `--dangerously-skip-permissions` so it
+  never prompts for tool approval inside this container. Combines with `-c`
+  (default) and `-t`; ignored by `-b` and `-e`. The container itself is
+  already sandboxed to the project dir plus your configured mounts, so
+  bypassing in-app prompts is reasonably safe — but anything you expose via
+  `mounts.conf` or the `home/` overlay (especially read-write) is now
+  fair game for Claude, so double-check those before using `-y`.
 
 ```sh
 claude-docker -t ~/dev/my_website    # tmux-backed session
 claude-docker -b ~/dev/my_website    # just a shell
 claude-docker ~/dev/my_website       # same as -c
+claude-docker -y ~/dev/my_website    # claude with skipped permission prompts
 claude-docker -e 'npm test && npm run build' ~/dev/my_website
 ```
 
@@ -158,6 +166,9 @@ alias claude-docker='claude-docker -b'
 
 # always run a specific command
 alias cdtest='claude-docker -e "npm test && npm run build"'
+
+# always skip permission prompts
+alias claude-docker='claude-docker -y'
 ```
 
 Reload your shell (or `source ~/.bashrc`) and `claude-docker ~/dev/my_website`
@@ -189,6 +200,28 @@ isolated):
   paths.
 
 Everything else in the container is ephemeral (it runs with `--rm`).
+
+### Per-project permissions and settings
+
+When you're using Claude Code and it asks "allow this tool?", you can pick
+"always allow". That choice has to be remembered somewhere — and Claude Code
+remembers it in a small folder called `.claude/` that lives **inside your
+project**, next to your code. Two files there matter:
+
+- `.claude/settings.json` — project-wide settings. Check this into git if you
+  want your whole team to share the same rules.
+- `.claude/settings.local.json` — your personal choices for this project.
+  Usually gitignored. This is where the "always allow" prompts end up.
+
+`claude-docker` doesn't do anything special to save these, and it doesn't
+need to. Your project folder is already shared with the container (that's how
+Claude can edit your files in the first place), so when Claude writes to
+`.claude/settings.local.json` inside the container, the change lands on your
+host — right there in the project — and is still there next time you open it.
+
+The nice side-effect: the permissions you approve for one project **don't
+carry over to other projects**. Each project keeps its own `.claude/` folder
+and its own list of what's allowed, which is usually what you want.
 
 > **Secrets in bash history:** the container sets `HISTCONTROL=ignoreboth`,
 > which means any command typed with a **leading space** is not saved to

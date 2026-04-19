@@ -7,12 +7,13 @@ Similar in spirit to Anthropic's official Claude sandbox image, but more
 convenient for everyday use: your login, theme, and other Claude settings are
 persisted across runs, easy customization, and more.
 
-## Why
+After installing this, you just run `claude-docker ~/some-project` to instantly have claude running in any project.
 
-- **Isolation.** Claude Code runs with full access to whatever directory you
-  point it at. Running it inside a container means it can't wander outside the
-  bind-mount into the rest of your home directory.
-- **Convenience.** `claude-docker ~/some-project` and you're in.
+## Features
+- Persists claude login and global settings like theme
+- Complete terminal setup including TERM, timezone and locale
+- Add custom packages and settings to the dockerfile
+- Automatically start and attach to tmux session
 
 ## Installation
 

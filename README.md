@@ -34,7 +34,7 @@ claude-docker .
 
 And that's it! This will start a docker container for running claude, with only access to this project.
 
-The first time, this will ask you some question about configuration (you can just accept the defaults) and it will build a Docker image for you. T
+The first time, this will ask you some question about configuration (you can just accept the defaults) and it will build a Docker image for you.
 
 ## Mounting extra files
 You might want to make a certain file available in all your editing sessions (like your gitconfig or your editor config).
@@ -61,7 +61,7 @@ For paths outside `$HOME` or other advanced cases, see the *Mounting extra files
 Requirements: Docker, Bash, Linux or Mac OS.
 
 ```sh
-git clone https://github.com/<you>/claude-docker.git
+git clone https://github.com/rjekker/claude-docker.git
 cd claude-docker
 ./install.sh
 ```
@@ -143,6 +143,12 @@ Pick what runs inside the container with one of these mutually-exclusive flags
   bypassing in-app prompts is reasonably safe — but anything you expose via
   `mounts.conf` or the `home/` overlay (especially read-write) is now
   fair game for Claude, so double-check those before using `-y`.
+
+  > **Note:** `-y` only takes effect when a **new** container is started.
+  > If a container for this project is already running, the launcher just
+  > `docker exec`s into it and the existing Claude process keeps whatever
+  > permission mode it was launched with. Exit the running container first
+  > if you want to flip yolo mode on or off.
 
 ```sh
 claude-docker -t ~/dev/my_website    # tmux-backed session
@@ -297,14 +303,6 @@ as the `codesensei` user at the end of the Docker build. Edit it to install
 extra packages, drop in dotfiles, or otherwise customize your image.
 Passwordless `sudo` is available for anything that needs root.
 
-The file ships as a no-op with commented examples. A fuller reference —
-showcasing my current emacs/python setup — can be found in this repo as zexample-extras.sh`.
-
-```sh
-cp ~/.local/share/claude-docker/example-extras.sh \
-   ~/.local/share/claude-docker/image/build-extras.sh
-```
-
 After editing, rebuild the image:
 
 ```sh
@@ -313,8 +311,7 @@ claude-docker ~/dev/my_website
 ```
 
 Your edits are preserved across upgrades: `install.sh` only writes the default
-`build-extras.sh` if the file does not already exist. `example-extras.sh` is
-refreshed on every `install.sh` run.
+`build-extras.sh` if the file does not already exist.
 
 ## Rebuild / update
 

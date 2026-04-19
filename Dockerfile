@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fd-find \
     git \
     less\
-    locales\
     man-db \
     manpages \
     nano \
@@ -118,6 +117,9 @@ RUN echo 'export COLORTERM=truecolor' >> /home/codesensei/.bashrc
 RUN echo 'alias cat="batcat"' >> /home/codesensei/.bashrc
 RUN echo 'alias bat="batcat"' >> /home/codesensei/.bashrc
 RUN echo 'export MANPAGER="batcat -plman"' >> /home/codesensei/.bashrc
+
+# --- fd (Debian's fd-find package installs the binary as `fdfind`)
+RUN echo 'alias fd="fdfind"' >> /home/codesensei/.bashrc
 
 # ── Bash history ─────────────────────────────────────────────────────────────
 # Mounted per-project from the host. ignoreboth = ignorespace + ignoredups:

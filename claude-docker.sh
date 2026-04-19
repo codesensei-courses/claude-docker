@@ -52,7 +52,7 @@ STATE_DIR="$CLAUDE_DOCKER_DATA/state"
 if ! docker image inspect claude-docker:latest &>/dev/null; then
     echo "Docker image 'claude-docker:latest' not found."
     read -rp "Build it now? [Y/n] " answer
-    if [[ ! "$answer" =~  ^[Nn]$ ]]; then
+    if [[ ! "$answer" =~ ^[Nn]$ ]]; then
         BUILD_ARGS=(--build-arg UID="$(id -u)")
         if [[ -n "${LANG:-}" ]]; then
             read -rp "Match host locale '$LANG' in the image? [Y/n] " loc_answer

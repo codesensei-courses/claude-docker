@@ -1,0 +1,63 @@
+* Overview
+- document: idee is 1 large image dat je overal kunt runnen, met al je dev spul al klaar
+  optioneel langer runnende containers met extra state
+- document lack of sandbox      
+
+- do similar projects exist? yes: https://github.com/anthropics/claude-code/blob/main/.devcontainer/Dockerfile
+- match username (nee, codesensei is een soort reclame :)
+- GPG forwarding: te irritant
+  
+- usage/manual/readme
+- other things to make this publishable?
+- blog/reddit/linkedin
+- sandbox/firewall..
+
+- cleanup stale sessions?  
+- check docs and comments match reality
+
+- final review
+- final review of docs  
+** Nieuwe features
+- create project, don't run
+- per-project settings:
+  - allow everything
+  - mounts
+  - extra installs - als je dat doet krijgt het project een eigen image (NIET: idee is 1 large image)
+** Omschrijving-
+- it's a bit like the official claude docker image, but with more convenience
+- quickly start a docker with claude in any project  
+- persist claude login, theme settings etc.
+- rebuild/update: just delete the dockerfile (give example cmdline), then run claude-docker, it will build automatically
+** Testing
+- test on mac and linux
+
+** Claude's todo list
+- unit tests
+  Can we mock calls to docker to check what happens?
+  test all combinations of mode and other flags, on first run and subsequent run
+- --build: just build the image and exit. Ignores all other flags.
+- List/status command and project cleanup: show known projects, running
+  containers, disk use under state/projects/<hash>/; prune stale entries.  
+- per project config: container persist (no rm), ssh forwarding, extra mounts
+  extra installs? Die runnen dan in de container at startup
+- Port forwarding: host-visible ports for dev servers (npm run dev, etc.).
+  Either a -p passthrough flag or a ports.conf alongside mounts.conf.
+  Problem here: ports.conf is global - we might want a per-project setting..??
+- build a new image claude-docker:latest, but for that I have to stop all running containers?  
+
+- Firewall / sandbox / egress whitelist: restrict outbound network along the
+  lines of the official devcontainer's init-firewall.sh. bubblewrap + socat
+  are already installed but unused. Matters most for -y (yolo) mode.
+
+** tmux
+focus-events is a tmux option that makes tmux forward terminal focus gain/loss escape sequences (\e[I / \e[O) to the programs running inside it.
+
+  Claude Code (and other TUI apps like Neovim) use these to detect when you switch away from or back to the terminal window. Without it enabled, apps inside tmux
+  never learn the window lost focus, so features like "pause animations when unfocused", "check for external file changes on refocus", or "stop polling when
+  backgrounded" don't work.
+
+  Enable it in ~/.tmux.conf:
+
+  set -g focus-events on
+
+  Then reload tmux (tmux source ~/.tmux.conf).

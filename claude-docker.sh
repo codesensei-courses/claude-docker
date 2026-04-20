@@ -5,6 +5,7 @@ MODE=claude
 MODE_FLAG=""
 CUSTOM_CMD=""
 YOLO=0
+SSH_FORWARD=0
 
 set_mode() {
     if [[ -n "$MODE_FLAG" && "$MODE_FLAG" != "$1" ]]; then
@@ -13,13 +14,14 @@ set_mode() {
     fi
     MODE_FLAG="$1"
 }
-while getopts ":tbce:y" opt; do
+while getopts ":tbce:ys" opt; do
     case "$opt" in
         t)  set_mode t; MODE=tmux ;;
         b)  set_mode b; MODE=bash ;;
         c)  set_mode c; MODE=claude ;;
         e)  set_mode e; MODE=exec; CUSTOM_CMD="$OPTARG" ;;
         y)  YOLO=1 ;;
+        s)  SSH_FORWARD=1 ;;
         :)  echo "Option -$OPTARG requires an argument" >&2; exit 1 ;;
         \?) echo "Unknown option: -$OPTARG" >&2; exit 1 ;;
     esac
@@ -27,12 +29,13 @@ done
 shift $((OPTIND - 1))
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 [-t|-b|-c|-e <cmd>] [-y] <project-folder>" >&2
+    echo "Usage: $0 [-t|-b|-c|-e <cmd>] [-y] [-s] <project-folder>" >&2
     echo "  -t         attach to existing tmux session, or start a new one" >&2
     echo "  -b         start just a bash shell" >&2
     echo "  -c         continue the claude session, or start a new one (default)" >&2
     echo "  -e <cmd>   run a custom command via bash -c (supports &&, ||, pipes)" >&2
     echo "  -y         run claude with --dangerously-skip-permissions (yolo mode)" >&2
+    echo "  -s         forward the host ssh-agent into the container" >&2
     echo "Example: $0 ~/dev/my_website" >&2
     echo "         $0 -e 'npm test && npm run build' ~/dev/my_website" >&2
     exit 1
@@ -215,6 +218,39 @@ if [[ "$YOLO" == 1 ]]; then
     CLAUDE_FLAGS="--dangerously-skip-permissions"
 fi
 
+# ── SSH agent forwarding (-s) ────────────────────────────────────────────────
+# Forwards the host ssh-agent socket into the container so tools like `git push`
+# over SSH can sign with host keys without copying private key material in.
+#
+# Platform handling:
+#   Linux:           bind-mount $SSH_AUTH_SOCK to a fixed path inside.
+#   macOS (Docker    Docker Desktop exposes the host agent at a magic path,
+#   Desktop):        /run/host-services/ssh-auth.sock. Mount it through
+#                    unchanged and point SSH_AUTH_SOCK at it.
+SSH_MOUNT=()
+if [[ "$SSH_FORWARD" == 1 ]]; then
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        SSH_MOUNT+=(
+            -v /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
+            -e SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock
+        )
+    else
+        if [[ -z "${SSH_AUTH_SOCK:-}" ]]; then
+            echo "Error: -s requires \$SSH_AUTH_SOCK to be set on the host." >&2
+            echo "       Is an ssh-agent running? Try: eval \"\$(ssh-agent -s)\" && ssh-add" >&2
+            exit 1
+        fi
+        if [[ ! -S "$SSH_AUTH_SOCK" ]]; then
+            echo "Error: \$SSH_AUTH_SOCK ($SSH_AUTH_SOCK) is not a socket." >&2
+            exit 1
+        fi
+        SSH_MOUNT+=(
+            -v "$SSH_AUTH_SOCK:/ssh-agent.sock"
+            -e SSH_AUTH_SOCK=/ssh-agent.sock
+        )
+    fi
+fi
+
 case "$MODE" in
     tmux)   RUN_CMD=(tmux new-session "claude $CLAUDE_FLAGS") ;;
     bash)   RUN_CMD=(bash) ;;
@@ -233,6 +269,12 @@ if [[ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/d
         echo "       Exit the running container ($CONTAINER_NAME) and re-run with -y." >&2
         exit 1
     fi
+    if [[ "$SSH_FORWARD" == 1 ]]; then
+        echo "Error: -s has no effect on an already-running container; bind-mounts" >&2
+        echo "       are fixed at container start time." >&2
+        echo "       Exit the running container ($CONTAINER_NAME) and re-run with -s." >&2
+        exit 1
+    fi
     if [[ "$MODE" == tmux ]] && docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null; then
         exit 0
     fi
@@ -248,6 +290,7 @@ docker run -it --rm --name "$CONTAINER_NAME" \
     -v "$PROJECT_STATE/todos":/home/codesensei/.claude/todos \
     -v "$PROJECT_STATE/bash_history":/home/codesensei/.bash_history \
     ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"} \
+    ${SSH_MOUNT[@]+"${SSH_MOUNT[@]}"} \
     -w "/home/codesensei/$PROJECT_NAME" \
     claude-docker \
     "${RUN_CMD[@]}"

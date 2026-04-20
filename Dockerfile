@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     man-db \
     manpages \
     nano \
+    openssh-client \
     ripgrep \
     tmux \
     # Locale + timezone support

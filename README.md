@@ -150,11 +150,30 @@ Pick what runs inside the container with one of these mutually-exclusive flags
   > permission mode it was launched with. Exit the running container first
   > if you want to flip yolo mode on or off.
 
+- `-s` — forward the host `ssh-agent` into the container. Only the agent
+  socket is shared, so tools like `git push` over SSH can sign with your
+  host keys without any private-key material being copied into the image or
+  container. Works on Linux (uses `$SSH_AUTH_SOCK`) and macOS (uses Docker
+  Desktop's built-in agent bridge at `/run/host-services/ssh-auth.sock`).
+  On Linux, make sure an agent is actually running (`ssh-add -l` on the
+  host should list your keys); on macOS with Docker Desktop, nothing
+  further is required.
+
+  > **Note:** like `-y`, `-s` only takes effect when a **new** container is
+  > started — bind-mounts are fixed at container start time. Exit the
+  > running container first if you need to enable forwarding.
+  >
+  > **Security:** while the container is running, any process inside it can
+  > ask the forwarded agent to sign challenges with your host keys. That's
+  > normal agent-forwarding behavior, but worth combining deliberately with
+  > `-y`. Private keys themselves never enter the container.
+
 ```sh
 claude-docker -t ~/dev/my_website    # tmux-backed session
 claude-docker -b ~/dev/my_website    # just a shell
 claude-docker ~/dev/my_website       # same as -c
 claude-docker -y ~/dev/my_website    # claude with skipped permission prompts
+claude-docker -s ~/dev/my_website    # forward host ssh-agent (for git push, etc.)
 claude-docker -e 'npm test && npm run build' ~/dev/my_website
 ```
 

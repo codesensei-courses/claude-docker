@@ -222,17 +222,48 @@ fi
 # Forwards the host ssh-agent socket into the container so tools like `git push`
 # over SSH can sign with host keys without copying private key material in.
 #
-# Platform handling:
-#   Linux:           bind-mount $SSH_AUTH_SOCK to a fixed path inside.
-#   macOS (Docker    Docker Desktop exposes the host agent at a magic path,
-#   Desktop):        /run/host-services/ssh-auth.sock. Mount it through
-#                    unchanged and point SSH_AUTH_SOCK at it.
+# The in-container socket path is always /ssh-agent.sock. Platform handling:
+#
+#   Linux:        bind-mount $SSH_AUTH_SOCK directly. Owner UID on the socket
+#                 matches the container user (set at build time), so perms
+#                 work without further fiddling.
+#
+#   macOS with    $SSH_AUTH_SOCK points at ~/.gnupg/S.gpg-agent.ssh. That's a
+#   gpg-agent:    regular user-owned socket under $HOME, which is in Docker
+#                 Desktop's default shared paths — bind-mount it through like
+#                 Linux. (Needs a recent Docker Desktop with VirtioFS; older
+#                 gRPC-FUSE didn't support Unix sockets over bind mounts.)
+#
+#   macOS with    Apple's agent lives under /private/tmp/com.apple.launchd.*
+#   Apple         and isn't usefully bind-mountable. Docker Desktop proxies it
+#   ssh-agent:    at /run/host-services/ssh-auth.sock, owned root:root 0660
+#                 inside the VM. We add supplementary group 0 to the container
+#                 process so the codesensei user picks up the group-read bit
+#                 — no chmod, no entrypoint, no install. The extra group only
+#                 grants access to root-group-owned files, not root itself.
 SSH_MOUNT=()
 if [[ "$SSH_FORWARD" == 1 ]]; then
     if [[ "$(uname -s)" == "Darwin" ]]; then
+        # On macOS, whatever we mount (the user's gpg-agent socket, or Docker
+        # Desktop's magic ssh-auth proxy) is reflected into the container as
+        # root:root 0660 — VirtioFS rewrites ownership when sharing from the
+        # Mac side into the VM. So the common fix is to give codesensei
+        # supplementary group 0, regardless of which socket we picked.
+        case "${SSH_AUTH_SOCK:-}" in
+            *gnupg*|*gpg-agent*)
+                if [[ ! -S "$SSH_AUTH_SOCK" ]]; then
+                    echo "Error: \$SSH_AUTH_SOCK ($SSH_AUTH_SOCK) is not a socket." >&2
+                    exit 1
+                fi
+                SSH_MOUNT+=(-v "$SSH_AUTH_SOCK:/ssh-agent.sock")
+                ;;
+            *)
+                SSH_MOUNT+=(-v /run/host-services/ssh-auth.sock:/ssh-agent.sock)
+                ;;
+        esac
         SSH_MOUNT+=(
-            -v /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
-            -e SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock
+            -e SSH_AUTH_SOCK=/ssh-agent.sock
+            --group-add 0
         )
     else
         if [[ -z "${SSH_AUTH_SOCK:-}" ]]; then

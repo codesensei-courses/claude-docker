@@ -57,8 +57,15 @@ and Claude Code launches automatically.
 
 ## Options
 
-Pick what runs inside the container with one of these flags
-(default is `-c`):
+Flags come in two groups. **Mode** flags pick what runs inside the
+container and work whether the container is new or already exists (the
+launcher `docker exec`s into a running one, or `docker start`s and execs
+into a stopped one). **Creation-only** flags configure how a fresh
+container is launched and so only apply on the `docker run` that creates
+it — passing them against an existing (running or stopped) container
+errors out, because the settings they control are baked in at creation.
+
+### Mode (default `-c`)
 
 - `-c` — continue the last Claude Code session for this project, or start a
   new one if none exists. Equivalent to `claude -c || claude`.
@@ -71,6 +78,9 @@ Pick what runs inside the container with one of these flags
   The command string is passed to bash unchanged, so shell syntax like `&&`,
   `||`, pipes, and redirections all work. Quote the whole command to keep
   your host shell from interpreting it first.
+
+### Creation-only flags
+
 - `-y` — yolo mode: run Claude with `--dangerously-skip-permissions` so it
   never prompts for tool approval inside this container. Combines with `-c`
   (default) and `-t`; ignored by `-b` and `-e`. The container itself is
@@ -78,12 +88,6 @@ Pick what runs inside the container with one of these flags
   bypassing in-app prompts is reasonably safe — but anything you expose via
   `mounts.conf` or the `home/` overlay (especially read-write) is now
   fair game for Claude, so double-check those before using `-y`.
-
-  > **Note:** `-y` only takes effect when a **new** container is started.
-  > If a container for this project is already running, the launcher just
-  > `docker exec`s into it and the existing Claude process keeps whatever
-  > permission mode it was launched with. Exit the running container first
-  > if you want to flip yolo mode on or off.
 
 - `-s` — forward the host `ssh-agent` into the container. Only the agent
   socket is shared, so tools like `git push` over SSH can sign with your
@@ -94,14 +98,29 @@ Pick what runs inside the container with one of these flags
   host should list your keys); on macOS with Docker Desktop, nothing
   further is required.
 
-  > **Note:** like `-y`, `-s` only takes effect when a **new** container is
-  > started — bind-mounts are fixed at container start time. Exit the
-  > running container first if you need to enable forwarding.
-  >
   > **Security:** while the container is running, any process inside it can
   > ask the forwarded agent to sign challenges with your host keys. That's
   > normal agent-forwarding behavior, but worth combining deliberately with
   > `-y`. Private keys themselves never enter the container.
+
+- `-k` — keep the container after exit. By default the launcher passes
+  `--rm` to `docker run`, so the container is destroyed the moment its
+  main process exits, and the next invocation builds a fresh one. With
+  `-k`, the container is left intact in "stopped" state instead; the next
+  `claude-docker` for the same project resurrects it via `docker start`
+  and `docker exec`. That lets in-container state (packages you
+  `sudo apt install`ed, files dropped in `/tmp`, etc.) survive across
+  sessions. See *When does the container stop?* below for exactly when
+  "exit" happens per mode.
+
+  > **Gotchas:** a persistent container pins its original image, so
+  > rebuilding `claude-docker:latest` won't affect it until you
+  > `docker rm` it. Stopped containers don't appear in `docker ps` — use
+  > `docker ps -a` to see them. For most workflows you don't need `-k`:
+  > the important state (sessions, history, project files) is already
+  > persisted on the host via bind-mounts (see *What gets persisted*
+  > below), and durable tweaks to the image are better expressed in
+  > `build-extras.sh` so they survive image rebuilds too.
 
 ```sh
 claude-docker -t ~/dev/my_website    # tmux-backed session
@@ -109,8 +128,37 @@ claude-docker -b ~/dev/my_website    # just a shell
 claude-docker ~/dev/my_website       # same as -c
 claude-docker -y ~/dev/my_website    # claude with skipped permission prompts
 claude-docker -s ~/dev/my_website    # forward host ssh-agent (for git push, etc.)
+claude-docker -k ~/dev/my_website    # keep the container after exit
 claude-docker -e 'npm test && npm run build' ~/dev/my_website
 ```
+
+### When does the container stop?
+
+A container runs as long as its main process (PID 1) is alive, and stops
+the moment that process exits. What PID 1 is — and therefore when it
+exits — depends on the mode you launched with:
+
+- `-b` — PID 1 is your bash shell. It exits when you type `exit` (or
+  Ctrl-D), and the container stops immediately.
+- `-e <cmd>` — PID 1 is `bash -c "<cmd>"`. As soon as the command
+  finishes (whether successfully, failing, or interrupted), the
+  container stops.
+- `-c` (default) — PID 1 is `bash -c "claude -c || claude"`, so it
+  stops as soon as you exit Claude.
+- `-t` — PID 1 is `tmux new-session "claude …"`. Tmux keeps running as
+  long as the session has at least one window; detach/reattach (and
+  second `claude-docker -t` invocations from another terminal) don't
+  stop it. The session ends — and the container stops — when its last
+  window closes, which by default happens when Claude inside tmux
+  exits and you haven't opened additional windows.
+
+By default the launcher passes `--rm` to `docker run`, so "container
+stops" also means "container is removed" — gone for good, and the next
+`claude-docker` builds a fresh one. With `-k` the container is left in
+"stopped" state instead: it's not running (and won't appear in
+`docker ps` — use `docker ps -a`), but it still exists on disk. The
+next `claude-docker` for that project brings it back via `docker start`;
+it only truly goes away when you `docker rm` it yourself.
 
 ### Making a flag the default
 
@@ -216,7 +264,9 @@ isolated):
   so up-arrow doesn't dredge up commands referencing a different project's
   paths.
 
-Everything else in the container is ephemeral (it runs with `--rm`).
+Everything else in the container is ephemeral: the launcher passes `--rm`
+to `docker run` by default, so the container is destroyed on exit. Pass
+`-k` (see *Options*) to keep it around between sessions instead.
 
 > **Secrets in bash history:** the container sets `HISTCONTROL=ignoreboth`,
 > which means any command typed with a **leading space** is not saved to

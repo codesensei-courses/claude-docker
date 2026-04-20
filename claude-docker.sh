@@ -6,6 +6,7 @@ MODE_FLAG=""
 CUSTOM_CMD=""
 YOLO=0
 SSH_FORWARD=0
+KEEP=0
 
 set_mode() {
     if [[ -n "$MODE_FLAG" && "$MODE_FLAG" != "$1" ]]; then
@@ -14,7 +15,7 @@ set_mode() {
     fi
     MODE_FLAG="$1"
 }
-while getopts ":tbce:ys" opt; do
+while getopts ":tbce:ysk" opt; do
     case "$opt" in
         t)  set_mode t; MODE=tmux ;;
         b)  set_mode b; MODE=bash ;;
@@ -22,6 +23,7 @@ while getopts ":tbce:ys" opt; do
         e)  set_mode e; MODE=exec; CUSTOM_CMD="$OPTARG" ;;
         y)  YOLO=1 ;;
         s)  SSH_FORWARD=1 ;;
+        k)  KEEP=1 ;;
         :)  echo "Option -$OPTARG requires an argument" >&2; exit 1 ;;
         \?) echo "Unknown option: -$OPTARG" >&2; exit 1 ;;
     esac
@@ -29,13 +31,19 @@ done
 shift $((OPTIND - 1))
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 [-t|-b|-c|-e <cmd>] [-y] [-s] <project-folder>" >&2
+    echo "Usage: $0 [-t|-b|-c|-e <cmd>] [-y] [-s] [-k] <project-folder>" >&2
+    echo "" >&2
+    echo "Mode (choose one; default -c; applies on both new and existing containers):" >&2
     echo "  -t         attach to existing tmux session, or start a new one" >&2
     echo "  -b         start just a bash shell" >&2
     echo "  -c         continue the claude session, or start a new one (default)" >&2
     echo "  -e <cmd>   run a custom command via bash -c (supports &&, ||, pipes)" >&2
+    echo "" >&2
+    echo "Creation-only flags (only take effect when a new container is started):" >&2
     echo "  -y         run claude with --dangerously-skip-permissions (yolo mode)" >&2
     echo "  -s         forward the host ssh-agent into the container" >&2
+    echo "  -k         keep the container after exit (default: --rm on exit)" >&2
+    echo "" >&2
     echo "Example: $0 ~/dev/my_website" >&2
     echo "         $0 -e 'npm test && npm run build' ~/dev/my_website" >&2
     exit 1
@@ -289,22 +297,40 @@ case "$MODE" in
     exec)   RUN_CMD=(bash -c "$CUSTOM_CMD") ;;
 esac
 
-# If the container is already running (e.g. a second `claude-docker ~/proj`
-# invocation), exec into it rather than trying to `docker run --name ...`
-# again — which would fail with a name collision. For tmux we try attaching
-# to the existing session first; otherwise we exec RUN_CMD in the container.
-if [[ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null)" == "true" ]]; then
-    if [[ "$YOLO" == 1 ]]; then
+# If a container with our name already exists (running from a second
+# `claude-docker ~/proj` invocation, or stopped from a prior -k run), reuse
+# it rather than trying to `docker run --name ...` again — which would fail
+# with a name collision. For tmux we try attaching to the existing session
+# first; otherwise we exec RUN_CMD in the container.
+if ! docker container inspect "$CONTAINER_NAME" &>/dev/null; then
+    CONTAINER_STATE=missing
+elif [[ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER_NAME")" == "true" ]]; then
+    CONTAINER_STATE=running
+else
+    CONTAINER_STATE=stopped
+fi
+
+if [[ "$CONTAINER_STATE" != "missing" ]]; then
+    if [[ "$SSH_FORWARD" == 1 ]]; then
+        echo "Error: -s has no effect on an existing container; bind-mounts" >&2
+        echo "       are fixed at container creation time." >&2
+        echo "       Remove the container ($CONTAINER_NAME) and re-run with -s." >&2
+        exit 1
+    fi
+    if [[ "$KEEP" == 1 ]]; then
+        echo "Error: -k has no effect on an existing container; the --rm decision" >&2
+        echo "       is fixed at container creation time." >&2
+        echo "       Remove the container ($CONTAINER_NAME) and re-run with -k." >&2
+        exit 1
+    fi
+    if [[ "$CONTAINER_STATE" == "running" && "$YOLO" == 1 ]]; then
         echo "Error: -y has no effect on an already-running container; the existing" >&2
         echo "       Claude process keeps the permission mode it was launched with." >&2
         echo "       Exit the running container ($CONTAINER_NAME) and re-run with -y." >&2
         exit 1
     fi
-    if [[ "$SSH_FORWARD" == 1 ]]; then
-        echo "Error: -s has no effect on an already-running container; bind-mounts" >&2
-        echo "       are fixed at container start time." >&2
-        echo "       Exit the running container ($CONTAINER_NAME) and re-run with -s." >&2
-        exit 1
+    if [[ "$CONTAINER_STATE" == "stopped" ]]; then
+        docker start "$CONTAINER_NAME" >/dev/null
     fi
     if [[ "$MODE" == tmux ]] && docker exec -it "$CONTAINER_NAME" tmux attach 2>/dev/null; then
         exit 0
@@ -312,7 +338,17 @@ if [[ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/d
     exec docker exec -it "$CONTAINER_NAME" "${RUN_CMD[@]}"
 fi
 
-docker run -it --rm --name "$CONTAINER_NAME" \
+# Fresh container. --rm removes it on exit by default; -k omits --rm so the
+# container survives in stopped state and the next invocation resurrects it
+# via `docker start` — useful for keeping apt-installed packages, /tmp, etc.
+# Note: a persistent container pins its original image, so rebuilding
+# claude-docker:latest won't affect it until `docker rm` clears it.
+RM_ARGS=(--rm)
+if [[ "$KEEP" == 1 ]]; then
+    RM_ARGS=()
+fi
+
+docker run -it ${RM_ARGS[@]+"${RM_ARGS[@]}"} --name "$CONTAINER_NAME" \
     --mount type=bind,source="$PROJECT_ABS",destination="/home/codesensei/$PROJECT_NAME" \
     -v "$STATE_DIR/credentials.json":/home/codesensei/.claude/.credentials.json \
     -v "$STATE_DIR/claude.json":/home/codesensei/.claude.json \

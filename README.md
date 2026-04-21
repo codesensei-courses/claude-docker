@@ -4,6 +4,14 @@ Run [Claude Code](https://claude.ai/code) inside a Debian container, against any
 
 Claude-docker remembers your Claude login session across projects, and it retains its project history after the docker container is destroyed.
 
+## Features
+- Persists claude login and global settings like theme
+- Add some nice things (man pages, bat, ripgrep, tmux, ...)
+- Automatically detects setup including timezone, locale, editor (vim/nano/emacs)
+- Very easy to mount extra files and add custom packages and settings to the dockerfile
+- Easy SSH forwarding
+- And more..
+
 ## Quick Start
 
 Requirements: Docker, Bash, Linux or Mac OS.
@@ -40,8 +48,6 @@ and Claude Code launches automatically.
 You can have multiple terminals connected to the same container, e.g.
 one with bash and another with Claude).
 
-
-
 ## Rationale
 I have lots of different projects on my machine. Some large, some small, some old, some new. It happens a lot that for a bit of maintenance here and there I want a quick Claude session. But I don't like to give Claude access to my entire computer, for obvious privacy and security reasons.
 
@@ -53,15 +59,7 @@ The solution: docker containers. We quickly start, stop and remove a container f
 We persist Claude login, history, shell history, and more, across runs, so the next time you do it, everything is still there.
 
 
-## Features
-- Persists claude login and global settings like theme
-- Add some nice things (man pages, bat, ripgrep, tmux, ...)
-- Automatically detects setup including timezone, locale, editor (vim/nano/emacs)
-- Very easy to mount extra files and add custom packages and settings to the dockerfile
-- Easy SSH forwarding
-- And more..
-
-## Options
+# Options
 You can pass the following options to `claude-docker`.
 
 Examples:
@@ -75,7 +73,7 @@ claude-docker -k ~/dev/my_website    # keep the container after exit
 claude-docker -e 'npm test && npm run build' ~/dev/my_website
 ```
 
-### Mode (default `-c`)
+## Mode (default `-c`)
 Pass one of these flags to determine what to run in the container.
 If there is no container for the project, it will be created.
 
@@ -91,7 +89,7 @@ If there is no container for the project, it will be created.
   `||`, pipes, and redirections all work. Quote the whole command to keep
   your host shell from interpreting it first.
 
-### Creation-only flags
+## Creation-only flags
 These flags can only be passed when you are starting a new container.
 So if you are already using a container for a specific project, exit
 it first before you pass these settings.
@@ -130,7 +128,7 @@ it first before you pass these settings.
   image are better expressed in `build-extras.sh` so they survive
   image rebuilds too.
 
-### Making a flag the default
+## Making a flag the default
 
 If you always want a particular mode, alias the launcher in your shell rc
 (`~/.bashrc`, `~/.zshrc`, ...):
@@ -140,7 +138,7 @@ If you always want a particular mode, alias the launcher in your shell rc
 alias claude-docker='claude-docker -t'
 ```
 
-## Customizing the build
+# Customizing the build
 
 `~/.local/share/claude-docker/image/build-extras.sh` is a hook script that runs
 as the `codesensei` user at the end of the Docker build. Edit it to install
@@ -170,11 +168,11 @@ claude-docker ~/dev/my_website
 
 Your persisted login and settings survive the rebuild.
 
-## Mounting extra files
+# Mounting extra files
 You might want to make a certain file available in all your editing
 sessions (like your gitconfig or your editor config).
 
-### The home folder
+## The home folder
 The easiest way is to drop the file (or a symlink to it) into
 `~/.local/share/claude-docker/home/`. Anything there shows up at the
 matching path under `/home/codesensei/` inside the container on every
@@ -207,7 +205,7 @@ configs like `.tmux.conf`. For anything where a container-side change
 could affect your host (`.gitconfig`, `.ssh`, credentials, ...), mount
 it read-only via `mounts.conf` instead. 
 
-### `mounts.conf`
+## `mounts.conf`
 
 For mounts that don't fit the "home overlay" model (files outside `$HOME`,
 read-only mounts, custom destination paths), create
@@ -228,7 +226,7 @@ container to be able to modify (credentials, shared configs).
 You can combine both mechanisms; specs from `mounts.conf` and entries from
 `home/` are all passed to `docker run`.
 
-## What gets persisted
+# What gets persisted
 
 State lives on the host under `~/.local/share/claude-docker/state/` and is
 bind-mounted into the container. Two tiers:
@@ -262,7 +260,7 @@ to `docker run` by default, so the container is destroyed on exit. Pass
 > still visible to other processes (e.g. `ps`) while it runs, so prefer
 > `--token-file`, stdin, or env vars when the tool supports them.
 
-### Per-project permissions and settings
+## Per-project permissions and settings
 
 When you're using Claude Code and it asks "allow this tool?", you can pick
 "always allow". That choice has to be remembered somewhere — and Claude Code
@@ -284,7 +282,7 @@ The nice side-effect: the permissions you approve for one project **don't
 carry over to other projects**. Each project keeps its own `.claude/` folder
 and its own list of what's allowed, which is usually what you want.
 
-## Uninstallation
+# Uninstallation
 
 To remove everything claude-docker installed:
 

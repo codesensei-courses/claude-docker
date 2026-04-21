@@ -4,32 +4,6 @@ Run [Claude Code](https://claude.ai/code) inside a Debian container, against any
 
 Claude-docker remembers your Claude login session across projects, and it retains its project history after the docker container is destroyed.
 
-## Rationale
-I have lots of different projects on my machine. Some large, some small, some old, some new. It happens a lot that for a bit of maintenance here and there I want a quick Claude session. But I don't like to give Claude access to my entire computer, for obvious privacy and security reasons.
-
-Although I sometimes run Claude in a dedicated VM in the cloud, that is also not always optimal. Having files locally available is very nice - using GUI editors, having all my tools at my fingertips, it's just very convenient.
-
-So I want a quick way to fire up Claude for any local project, but giving it access ONLY to a specific project.
-
-The solution: docker containers. We quickly start, stop and remove a container for a project, and destroy it immediately afterwards. 
-We persist Claude login, history, shell history, and more, across runs, so the next time you do it, everything is still there.
-
-## Quick overview
-After installing this, you just run `claude-docker ~/some-project` to instantly have claude running in any project. That's it.
-
-This project creates 1 single Docker image for all your projects. You
-can customize it to install extra packages you need to support your
-projects.
-
-
-## Features
-- Persists claude login and global settings like theme
-- Add some nice things (man pages, bat, ripgrep, tmux, ...)
-- Automatically detects setup including timezone, locale, editor (vim/nano/emacs)
-- Very easy to mount extra files and add custom packages and settings to the dockerfile
-- Easy SSH forwarding
-- And more..
-
 ## Quick Start
 
 Requirements: Docker, Bash, Linux or Mac OS.
@@ -65,6 +39,27 @@ and Claude Code launches automatically.
 
 You can have multiple terminals connected to the same container, e.g.
 one with bash and another with Claude).
+
+
+
+## Rationale
+I have lots of different projects on my machine. Some large, some small, some old, some new. It happens a lot that for a bit of maintenance here and there I want a quick Claude session. But I don't like to give Claude access to my entire computer, for obvious privacy and security reasons.
+
+Although I sometimes run Claude in a dedicated VM in the cloud, that is also not always optimal. Having files locally available is very nice - using GUI editors, having all my tools at my fingertips, it's just very convenient.
+
+So I want a quick way to fire up Claude for any local project, but giving it access ONLY to a specific project.
+
+The solution: docker containers. We quickly start, stop and remove a container for a project, and destroy it immediately afterwards. 
+We persist Claude login, history, shell history, and more, across runs, so the next time you do it, everything is still there.
+
+
+## Features
+- Persists claude login and global settings like theme
+- Add some nice things (man pages, bat, ripgrep, tmux, ...)
+- Automatically detects setup including timezone, locale, editor (vim/nano/emacs)
+- Very easy to mount extra files and add custom packages and settings to the dockerfile
+- Easy SSH forwarding
+- And more..
 
 ## Options
 You can pass the following options to `claude-docker`.

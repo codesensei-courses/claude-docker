@@ -1,4 +1,8 @@
 * Overview
+- by default in cwd; add --help
+- default image op dockerhub
+- --build --> rebuild dus ook rm; docs aangepast?  
+    
 - document: idee is 1 large image dat je overal kunt runnen, met al je dev spul al klaar
   optioneel langer runnende containers met extra state
 - document lack of sandbox      
